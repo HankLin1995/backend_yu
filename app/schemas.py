@@ -1,0 +1,88 @@
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from datetime import datetime
+
+# Customer schemas
+class CustomerBase(BaseModel):
+    line_name: str
+    line_pic_url: str
+    phone: str
+    email: EmailStr
+    address: str
+
+class CustomerCreate(CustomerBase):
+    line_id: str
+
+class Customer(CustomerBase):
+    line_id: str
+    create_date: datetime
+
+    class Config:
+        from_attributes = True
+
+# Product schemas
+class ProductBase(BaseModel):
+    product_name: str
+    price: float
+    description: str
+    stock_quantity: int
+
+class ProductCreate(ProductBase):
+    pass
+
+class ProductUpdate(ProductBase):
+    specail_price: Optional[float] = None
+
+class Product(ProductBase):
+    product_id: int
+    specail_price: Optional[float] = None
+    create_time: datetime
+
+    class Config:
+        from_attributes = True
+
+# Category schemas
+class CategoryBase(BaseModel):
+    category_name: str
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class Category(CategoryBase):
+    category_id: int
+
+    class Config:
+        from_attributes = True
+
+# Order schemas
+class OrderDetailBase(BaseModel):
+    product_id: int
+    quantity: int
+
+class OrderDetailCreate(OrderDetailBase):
+    pass
+
+class OrderDetail(OrderDetailBase):
+    order_detail_id: int
+    order_id: int
+    unit_price: float
+    subtotal: float
+
+    class Config:
+        from_attributes = True
+
+class OrderBase(BaseModel):
+    line_id: str
+
+class OrderCreate(OrderBase):
+    details: List[OrderDetailCreate]
+
+class Order(OrderBase):
+    order_id: int
+    order_date: datetime
+    order_status: str
+    total_amount: float
+    details: List[OrderDetail]
+
+    class Config:
+        from_attributes = True
