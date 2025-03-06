@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -31,7 +31,7 @@ class Product(Base):
     product_id = Column(Integer, primary_key=True, index=True)
     product_name = Column(String, index=True)
     price = Column(Float)
-    specail_price = Column(Float, nullable=True)
+    special_price = Column(Float, nullable=True)
     stock_quantity = Column(Integer)
     description = Column(String)
     create_time = Column(DateTime, default=datetime.utcnow)
@@ -80,6 +80,7 @@ class OrderDetail(Base):
     quantity = Column(Integer)
     unit_price = Column(Float)
     subtotal = Column(Float)
+    product_deleted = Column(Boolean, default=False)
     
     order = relationship("Order", back_populates="details")
     product = relationship("Product", back_populates="orders")

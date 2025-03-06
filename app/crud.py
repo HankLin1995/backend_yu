@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from . import models, schemas
 from fastapi import HTTPException
 from typing import List, Optional
@@ -35,6 +35,9 @@ def create_product(db: Session, product: schemas.ProductCreate):
     db.refresh(db_product)
     return db_product
 
+def get_product(db: Session, product_id: int):
+    return db.query(models.Product).filter(models.Product.product_id == product_id).first()
+
 def update_product(db: Session, product_id: int, product: schemas.ProductUpdate):
     db_product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
     if not db_product:
@@ -56,6 +59,30 @@ def update_product_stock(db: Session, product_id: int, quantity: int):
     db.commit()
     db.refresh(db_product)
     return db_product
+
+def delete_product(db: Session, product_id: int):
+    # Get the product
+    db_product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Mark all order details for this product as deleted
+    order_details = db.query(models.OrderDetail).filter(models.OrderDetail.product_id == product_id).all()
+    for detail in order_details:
+        detail.product_deleted = True
+    
+    # Remove product from all categories
+    db_product.categories = []
+    
+    # Delete all product photos
+    for photo in db_product.photos:
+        db.delete(photo)
+    
+    # Delete the product
+    db.delete(db_product)
+    db.commit()
+    
+    return {"message": "Product deleted successfully"}
 
 # Category CRUD operations
 def add_product_to_categories(db: Session, product_id: int, category_ids: List[int]):
@@ -105,7 +132,7 @@ def create_order(db: Session, order: schemas.OrderCreate):
         if product.stock_quantity < detail.quantity:
             raise HTTPException(status_code=400, detail=f"Insufficient stock for product {detail.product_id}")
         
-        unit_price = product.specail_price or product.price
+        unit_price = product.special_price if product.special_price is not None else product.price
         subtotal = unit_price * detail.quantity
         total_amount += subtotal
         
@@ -138,6 +165,11 @@ def create_order(db: Session, order: schemas.OrderCreate):
         raise HTTPException(status_code=400, detail="Error creating order")
     
     return db_order
+
+def get_order(db: Session, order_id: int):
+    return db.query(models.Order).options(
+        joinedload(models.Order.details)
+    ).filter(models.Order.order_id == order_id).first()
 
 def update_order_status(db: Session, order_id: int, status: str):
     db_order = db.query(models.Order).filter(models.Order.order_id == order_id).first()

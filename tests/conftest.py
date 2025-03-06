@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.database import Base
+from app.database import Base, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 import os
@@ -16,16 +16,22 @@ def db_engine():
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
-    os.remove("./test.db")
+    if os.path.exists("./test.db"):
+        os.remove("./test.db")
 
 @pytest.fixture(scope="function")
 def db_session(db_engine):
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+    connection = db_engine.connect()
+    transaction = connection.begin()
+    SessionLocal = sessionmaker(bind=connection)
     session = SessionLocal()
+
     try:
         yield session
     finally:
         session.close()
+        transaction.rollback()
+        connection.close()
 
 @pytest.fixture(scope="function")
 def client(db_session):

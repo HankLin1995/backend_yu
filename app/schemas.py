@@ -7,8 +7,8 @@ class CustomerBase(BaseModel):
     line_name: str
     line_pic_url: str
     phone: str
-    email: EmailStr
-    address: str
+    email: Optional[EmailStr]
+    address: Optional[str]
 
 class CustomerCreate(CustomerBase):
     line_id: str
@@ -28,14 +28,14 @@ class ProductBase(BaseModel):
     stock_quantity: int
 
 class ProductCreate(ProductBase):
-    pass
+    special_price: Optional[float] = None
 
 class ProductUpdate(ProductBase):
-    specail_price: Optional[float] = None
+    special_price: Optional[float] = None
 
 class Product(ProductBase):
     product_id: int
-    specail_price: Optional[float] = None
+    special_price: Optional[float] = None
     create_time: datetime
 
     class Config:
@@ -62,11 +62,14 @@ class OrderDetailBase(BaseModel):
 class OrderDetailCreate(OrderDetailBase):
     pass
 
-class OrderDetail(OrderDetailBase):
+class OrderDetail(BaseModel):
     order_detail_id: int
     order_id: int
+    product_id: int
+    quantity: int
     unit_price: float
     subtotal: float
+    product_deleted: bool = False
 
     class Config:
         from_attributes = True
