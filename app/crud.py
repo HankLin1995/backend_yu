@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session, joinedload
 from . import models, schemas
 from fastapi import HTTPException
 from typing import List, Optional
+import os
 
 # Customer CRUD operations
 def create_customer(db: Session, customer: schemas.CustomerCreate):
@@ -92,6 +93,14 @@ def delete_product(db: Session, product_id: int):
     db_product.categories = []
     
     # Delete all product files
+
+    for photo in db_product.photos:
+        file_path=photo.file_path
+        if file_path:
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
 
     # Delete all product photos
     for photo in db_product.photos:
