@@ -11,6 +11,8 @@ services:
       - ENVIRONMENT=production
       - DATABASE_URL=sqlite:///./app.db
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - app-network
 
   test:
     build: .
@@ -20,3 +22,14 @@ services:
       - ENVIRONMENT=test
       - DATABASE_URL=sqlite:///./test.db
     command: pytest -v
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN}
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

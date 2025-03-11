@@ -1,8 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException, Response
+from fastapi import FastAPI, Depends, HTTPException, Response, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 from . import crud, models, schemas
 from .database import engine, get_db
+from .database import UPLOAD_DIR
+import os
+import datetime
+import hashlib
+import shutil
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -26,6 +31,10 @@ def delete_customer(line_id: str, db: Session = Depends(get_db)):
 def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
     return crud.create_product(db=db, product=product)
 
+@app.get("/products/", response_model=List[schemas.Product], tags=["products"])
+def get_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud.get_products(db=db, skip=skip, limit=limit)
+
 @app.get("/products/{product_id}", response_model=schemas.Product, tags=["products"])
 def get_product(product_id: int, db: Session = Depends(get_db)):
     product = crud.get_product(db=db, product_id=product_id)
@@ -37,9 +46,9 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 def update_product(product_id: int, product: schemas.ProductUpdate, db: Session = Depends(get_db)):
     return crud.update_product(db=db, product_id=product_id, product=product)
 
-@app.put("/products/{product_id}/stock", response_model=schemas.Product, tags=["products"])
-def update_product_stock(product_id: int, quantity: int, db: Session = Depends(get_db)):
-    return crud.update_product_stock(db=db, product_id=product_id, quantity=quantity)
+# @app.put("/products/{product_id}/stock", response_model=schemas.Product, tags=["products"])
+# def update_product_stock(product_id: int, quantity: int, db: Session = Depends(get_db)):
+#     return crud.update_product_stock(db=db, product_id=product_id, quantity=quantity)
 
 @app.delete("/products/{product_id}", tags=["products"])
 def delete_product(product_id: int, db: Session = Depends(get_db)):
@@ -90,10 +99,10 @@ def update_order_detail(
 
 # Files
 
-@router.post("/products/{product_id}/upload/", response_model=schemas.Photo)
+@app.post("/products/{product_id}/upload/", response_model=schemas.Photo, tags=["photos"])
 async def upload_photo(
+    product_id: int,
     file: UploadFile = File(...),
-    product_id: int = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -102,66 +111,67 @@ async def upload_photo(
     Args:
         file: 上傳的檔案，必須是圖片格式
         product_id: 商品ID
- 
-    Returns:
-        Photo: 已創建的照片記錄
     """
-    # 檢查檔案類型
-    allowed_types = [".jpg", ".jpeg", ".png", ".gif"]
-    file_extension = os.path.splitext(file.filename)[1].lower()
+    # 檢查商品是否存在
+    product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
     
-    if file_extension not in allowed_types:
-        raise HTTPException(
-            status_code=400,
-            detail="只允許上傳 JPG、JPEG、PNG 或 GIF 格式的圖片"
-        )
+    # 驗證文件格式
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
     
     try:
-        if product_id:
-            product = db.query(Product).filter(Product.ProductID == product_id).first()
-            if not product:
-                raise HTTPException(status_code=404, detail="商品不存在")
-        
-        # 生成唯一的檔案名稱
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        new_filename = f"{product.ProductID}_{timestamp}{file_extension}"
-        file_path = os.path.join(UPLOAD_DIR, new_filename)
-        
-        # 保存檔案
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # 讀取文件內容
+        contents = await file.read()
         
         # 計算圖片雜湊值
-        with open(file_path, "rb") as f:
-            file_hash = hashlib.md5(f.read()).hexdigest()
-            
+        image_hash = hashlib.md5(contents).hexdigest()
+        
         # 檢查重複圖片
-        existing_photo = db.query(models.Photo).filter(
-            models.Photo.ImageHash == file_hash
+        existing_photo = db.query(models.ProductPhoto).filter(
+            models.ProductPhoto.image_hash == image_hash,
+            models.ProductPhoto.product_id == product_id
         ).first()
+        
         if existing_photo:
-            # 如果檔案已存在，刪除剛上傳的檔案
-            os.remove(file_path)
             raise HTTPException(status_code=400, detail="相同的照片已經存在")
         
+        # 生成唯一的文件名
+        file_extension = file.filename.split('.')[-1]
+        unique_filename = f"{product_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.{file_extension}"
+        
+        # 保存文件到指定目錄
+        file_path = os.path.join(UPLOAD_DIR, "products", unique_filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
         # 創建資料庫記錄
-        db_photo = models.Photo(
-            ProductID=product_id,
-            ImageHash=file_hash,
-            FilePath=new_filename  # 儲存檔案名稱
+        db_photo = models.ProductPhoto(
+            product_id=product_id,
+            file_path=file_path,
+            description=file.filename,
+            image_hash=image_hash
         )
         
         db.add(db_photo)
         db.commit()
         db.refresh(db_photo)
-        return db_photo
-
+        
+        return {
+            "photo_id": db_photo.photo_id,
+            "file_path": db_photo.file_path,
+            "image_hash": db_photo.image_hash,
+            "create_time": db_photo.created_date
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
-        # 如果發生錯誤，確保清理上傳的檔案
+        # 如果發生錯誤，清理上傳的檔案
         if 'file_path' in locals() and os.path.exists(file_path):
             os.remove(file_path)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"檔案上傳失敗: {str(e)}")
-

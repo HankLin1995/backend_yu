@@ -49,6 +49,9 @@ def create_product(db: Session, product: schemas.ProductCreate):
     db.refresh(db_product)
     return db_product
 
+def get_products(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Product).offset(skip).limit(limit).all()
+
 def get_product(db: Session, product_id: int):
     return db.query(models.Product).filter(models.Product.product_id == product_id).first()
 
@@ -64,15 +67,15 @@ def update_product(db: Session, product_id: int, product: schemas.ProductUpdate)
     db.refresh(db_product)
     return db_product
 
-def update_product_stock(db: Session, product_id: int, quantity: int):
-    db_product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
-    if not db_product:
-        raise HTTPException(status_code=404, detail="Product not found")
+# def update_product_stock(db: Session, product_id: int, quantity: int):
+#     db_product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+#     if not db_product:
+#         raise HTTPException(status_code=404, detail="Product not found")
     
-    db_product.stock_quantity = quantity
-    db.commit()
-    db.refresh(db_product)
-    return db_product
+#     db_product.stock_quantity = quantity
+#     db.commit()
+#     db.refresh(db_product)
+#     return db_product
 
 def delete_product(db: Session, product_id: int):
     # Get the product
@@ -88,10 +91,12 @@ def delete_product(db: Session, product_id: int):
     # Remove product from all categories
     db_product.categories = []
     
+    # Delete all product files
+
     # Delete all product photos
     for photo in db_product.photos:
         db.delete(photo)
-    
+
     # Delete the product
     db.delete(db_product)
     db.commit()
