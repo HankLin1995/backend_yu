@@ -6,7 +6,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      # - .:/app
+      - "${PHOTOS_PATH}:/app/uploads"
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=sqlite:///./app.db
