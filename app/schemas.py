@@ -37,6 +37,7 @@ class Product(ProductBase):
     product_id: int
     special_price: Optional[float] = None
     create_time: datetime
+    is_deleted: bool
 
     class Config:
         from_attributes = True
@@ -50,7 +51,7 @@ class CategoryCreate(CategoryBase):
 
 class Category(CategoryBase):
     category_id: int
-
+    
     class Config:
         from_attributes = True
 

@@ -27,6 +27,20 @@ def update_customer(db: Session, line_id: str, customer: schemas.CustomerBase):
     db.refresh(db_customer)
     return db_customer
 
+def delete_customer(db: Session, line_id: str):
+    db_customer = db.query(models.Customer).filter(models.Customer.line_id == line_id).first()
+    if not db_customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Mark related orders as customer_deleted=True instead of actually deleting them
+    customer_orders = db.query(models.Order).filter(models.Order.line_id == line_id).all()
+    for order in customer_orders:
+        order.customer_deleted = True
+    
+    db.delete(db_customer)
+    db.commit()
+    return {"message": "Customer deleted successfully"}
+
 # Product CRUD operations
 def create_product(db: Session, product: schemas.ProductCreate):
     db_product = models.Product(**product.model_dump())
@@ -85,6 +99,14 @@ def delete_product(db: Session, product_id: int):
     return {"message": "Product deleted successfully"}
 
 # Category CRUD operations
+
+def create_category(db: Session, category: schemas.CategoryCreate):
+    db_category = models.Category(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
 def add_product_to_categories(db: Session, product_id: int, category_ids: List[int]):
     db_product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
     if not db_product:

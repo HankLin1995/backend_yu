@@ -35,6 +35,7 @@ class Product(Base):
     stock_quantity = Column(Integer)
     description = Column(String)
     create_time = Column(DateTime, default=datetime.utcnow)
+    is_deleted = Column(Boolean, default=False)
     
     categories = relationship("Category", secondary=products_categories, back_populates="products")
     photos = relationship("ProductPhoto", back_populates="product")
