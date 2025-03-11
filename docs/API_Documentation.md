@@ -1,5 +1,3 @@
-# 濠鮮後端 API 文檔
-
 ## 基本資訊
 - Base URL: `http://localhost:8000`
 - 所有回應格式均為 JSON
