@@ -42,6 +42,12 @@ class Product(ProductBase):
     class Config:
         from_attributes = True
 
+class Photo(BaseModel):
+    photo_id: int
+    file_path: str
+    image_hash: str
+    create_time: datetime
+
 # Category schemas
 class CategoryBase(BaseModel):
     category_name: str

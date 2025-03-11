@@ -87,3 +87,81 @@ def update_order_detail(
     order_id: int, detail_id: int, quantity: int, db: Session = Depends(get_db)
 ):
     return crud.update_order_detail(db=db, order_id=order_id, detail_id=detail_id, quantity=quantity)
+
+# Files
+
+@router.post("/products/{product_id}/upload/", response_model=schemas.Photo)
+async def upload_photo(
+    file: UploadFile = File(...),
+    product_id: int = None,
+    db: Session = Depends(get_db)
+):
+    """
+    上傳照片檔案的端點
+    
+    Args:
+        file: 上傳的檔案，必須是圖片格式
+        product_id: 商品ID
+ 
+    Returns:
+        Photo: 已創建的照片記錄
+    """
+    # 檢查檔案類型
+    allowed_types = [".jpg", ".jpeg", ".png", ".gif"]
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    
+    if file_extension not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="只允許上傳 JPG、JPEG、PNG 或 GIF 格式的圖片"
+        )
+    
+    try:
+        if product_id:
+            product = db.query(Product).filter(Product.ProductID == product_id).first()
+            if not product:
+                raise HTTPException(status_code=404, detail="商品不存在")
+        
+        # 生成唯一的檔案名稱
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        new_filename = f"{product.ProductID}_{timestamp}{file_extension}"
+        file_path = os.path.join(UPLOAD_DIR, new_filename)
+        
+        # 保存檔案
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # 計算圖片雜湊值
+        with open(file_path, "rb") as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()
+            
+        # 檢查重複圖片
+        existing_photo = db.query(models.Photo).filter(
+            models.Photo.ImageHash == file_hash
+        ).first()
+        if existing_photo:
+            # 如果檔案已存在，刪除剛上傳的檔案
+            os.remove(file_path)
+            raise HTTPException(status_code=400, detail="相同的照片已經存在")
+        
+        # 創建資料庫記錄
+        db_photo = models.Photo(
+            ProductID=product_id,
+            ImageHash=file_hash,
+            FilePath=new_filename  # 儲存檔案名稱
+        )
+        
+        db.add(db_photo)
+        db.commit()
+        db.refresh(db_photo)
+        return db_photo
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 如果發生錯誤，確保清理上傳的檔案
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"檔案上傳失敗: {str(e)}")
+

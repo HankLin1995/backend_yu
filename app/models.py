@@ -54,8 +54,8 @@ class ProductPhoto(Base):
 
     photo_id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.product_id"))
-    photo_url = Column(String)
-    description = Column(String)
+    file_path = Column(String)
+    description = Column(String,nullable=True)
     created_date = Column(DateTime, default=datetime.utcnow)
     
     product = relationship("Product", back_populates="photos")
