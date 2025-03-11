@@ -1,1 +1,16 @@
-uploads/
+# 忽略虚拟环境
+venv/
+etc/
+Lib/
+Scripts/
+share/
+**/__pycache__
+.streamlit/secrets.toml
+*.cfg
+ngrok.exe
+photos/
+photos_result/
+photos_delete/
+Include/
+*.db
+.env
