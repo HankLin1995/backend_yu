@@ -112,6 +112,50 @@ def delete_product(db: Session, product_id: int):
     
     return {"message": "Product deleted successfully"}
 
+# Product Discount
+
+def add_product_discount(db: Session, product_id: int, discount: schemas.ProductDiscount):
+    product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    # check if quantity is valid
+    if discount.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Invalid quantity")
+    # check if price is valid
+    if discount.price <= 0:
+        raise HTTPException(status_code=400, detail="Invalid price")
+    # check if discount already exists
+    existing_discount = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id,
+        models.ProductDiscount.quantity == discount.quantity
+    ).first()
+    if existing_discount:
+        raise HTTPException(status_code=400, detail="Discount already exists")
+    
+    # add discount
+    db_discount = models.ProductDiscount(**discount.model_dump())
+    db.add(db_discount)
+    db.commit()
+    db.refresh(db_discount)
+    return db_discount
+
+def get_product_discounts(db: Session, product_id: int, quantity: int):
+    return db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id,
+        models.ProductDiscount.quantity == quantity
+    ).all()
+
+def remove_product_discount(db: Session, product_id: int, discount_id: int):
+    db_discount = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id,
+        models.ProductDiscount.discount_id == discount_id
+    ).first()
+    if not db_discount:
+        raise HTTPException(status_code=404, detail="Discount not found")
+    db.delete(db_discount)
+    db.commit()
+    return {"message": "Discount deleted successfully"}
+
 # Category CRUD operations
 
 def create_category(db: Session, category: schemas.CategoryCreate):

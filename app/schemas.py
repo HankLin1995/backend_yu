@@ -48,6 +48,13 @@ class Photo(BaseModel):
     image_hash: str
     create_time: datetime
 
+
+class ProductDiscount(BaseModel):
+    discount_id: int
+    product_id: int
+    quantity: int
+    price: float
+
 # Category schemas
 class CategoryBase(BaseModel):
     category_name: str

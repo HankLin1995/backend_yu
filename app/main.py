@@ -54,6 +54,47 @@ def update_product(product_id: int, product: schemas.ProductUpdate, db: Session 
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     return crud.delete_product(db=db, product_id=product_id)
 
+@app.post("/products/{product_id}/discounts", tags=["products"])
+def add_product_discount(product_id: int, discount: schemas.ProductDiscount, db: Session = Depends(get_db)):
+
+    # check if product exist and quantity used
+    product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # check if quantity is valid
+    if discount.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Invalid quantity")
+    
+    # check if price is valid
+    if discount.price <= 0:
+        raise HTTPException(status_code=400, detail="Invalid price")
+    
+    # check if discount already exists
+    existing_discount = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id,
+        models.ProductDiscount.quantity == discount.quantity
+    ).first()
+    if existing_discount:
+        raise HTTPException(status_code=400, detail="Discount already exists")
+    
+    # add discount
+    db_discount = models.ProductDiscount(**discount.model_dump())
+    db.add(db_discount)
+    db.commit()
+    db.refresh(db_discount)
+    return db_discount
+
+@app.get("/products/{product_id}/discounts", response_model=List[schemas.ProductDiscount], tags=["products"])
+def get_product_discounts(product_id: int, quantity: int, db: Session = Depends(get_db)):
+    return crud.get_product_discounts(db=db, product_id=product_id, quantity=quantity)
+
+@app.delete("/products/{product_id}/discounts/{discount_id}", tags=["products"])
+def remove_product_discount(product_id: int, discount_id: int, db: Session = Depends(get_db)):
+    return crud.remove_product_discount(db=db, product_id=product_id, discount_id=discount_id)
+
+
+
 # Category endpoints
 @app.post("/products/{product_id}/categories", tags=["categories"])
 def add_product_categories(product_id: int, category_ids: List[int], db: Session = Depends(get_db)):

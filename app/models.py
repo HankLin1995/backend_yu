@@ -40,6 +40,7 @@ class Product(Base):
     categories = relationship("Category", secondary=products_categories, back_populates="products")
     photos = relationship("ProductPhoto", back_populates="product")
     orders = relationship("OrderDetail", back_populates="product")
+    discounts = relationship("ProductDiscount", back_populates="product")
 
 class Category(Base):
     __tablename__ = "categories"
@@ -60,6 +61,16 @@ class ProductPhoto(Base):
     created_date = Column(DateTime, default=datetime.utcnow)
     
     product = relationship("Product", back_populates="photos")
+
+class ProductDiscount(Base):
+    __tablename__ = "product_discounts"
+
+    discount_id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.product_id"))
+    quantity = Column(Integer)
+    price = Column(Float)
+    
+    product = relationship("Product", back_populates="discounts")
 
 class Order(Base):
     __tablename__ = "orders"
