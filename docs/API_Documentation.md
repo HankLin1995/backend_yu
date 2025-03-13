@@ -210,8 +210,6 @@
 - **請求體**:
   ```json
   {
-    "discount_id": 0,
-    "product_id": "integer",
     "quantity": "integer",
     "price": "float"
   }

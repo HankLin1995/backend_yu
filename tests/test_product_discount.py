@@ -46,7 +46,6 @@ def test_invalid_discount_validation(client):
     
     # 測試無效數量
     invalid_quantity_data = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 0,
         "price": 180.0
@@ -57,7 +56,6 @@ def test_invalid_discount_validation(client):
     
     # 測試無效價格
     invalid_price_data = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 2,
         "price": 0
@@ -82,7 +80,6 @@ def test_duplicate_discount_validation(client):
     
     # 新增第一個折扣
     discount_data = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 2,
         "price": 180.0
@@ -92,7 +89,6 @@ def test_duplicate_discount_validation(client):
     
     # 嘗試新增重複的折扣
     duplicate_discount = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 2,
         "price": 170.0
@@ -117,7 +113,6 @@ def test_get_product_discounts(client):
     
     # 新增折扣
     discount_data = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 2,
         "price": 180.0
@@ -149,7 +144,6 @@ def test_remove_product_discount(client):
     
     # 新增折扣
     discount_data = {
-        "discount_id": 0,
         "product_id": product_id,
         "quantity": 2,
         "price": 180.0

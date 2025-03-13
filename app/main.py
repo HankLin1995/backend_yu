@@ -56,7 +56,6 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 
 @app.post("/products/{product_id}/discounts", tags=["products"])
 def add_product_discount(product_id: int, discount: schemas.ProductDiscount, db: Session = Depends(get_db)):
-
     # check if product exist and quantity used
     product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
     if not product:
@@ -79,7 +78,11 @@ def add_product_discount(product_id: int, discount: schemas.ProductDiscount, db:
         raise HTTPException(status_code=400, detail="Discount already exists")
     
     # add discount
-    db_discount = models.ProductDiscount(**discount.model_dump())
+    db_discount = models.ProductDiscount(
+        product_id=product_id,
+        quantity=discount.quantity,
+        price=discount.price
+    )
     db.add(db_discount)
     db.commit()
     db.refresh(db_discount)
