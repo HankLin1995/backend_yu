@@ -204,6 +204,86 @@
     }
     ```
 
+### 新增商品數量折扣
+- **端點**: `/products/{product_id}/discounts`
+- **方法**: `POST`
+- **請求體**:
+  ```json
+  {
+    "discount_id": 0,
+    "product_id": "integer",
+    "quantity": "integer",
+    "price": "float"
+  }
+  ```
+- **回應** (200 OK):
+  ```json
+  {
+    "discount_id": "integer",
+    "product_id": "integer",
+    "quantity": "integer",
+    "price": "float"
+  }
+  ```
+- **錯誤**:
+  - 400 Bad Request:
+    ```json
+    {
+      "detail": "Invalid quantity"
+    }
+    ```
+  - 400 Bad Request:
+    ```json
+    {
+      "detail": "Invalid price"
+    }
+    ```
+  - 400 Bad Request:
+    ```json
+    {
+      "detail": "Discount already exists"
+    }
+    ```
+  - 404 Not Found:
+    ```json
+    {
+      "detail": "Product not found"
+    }
+    ```
+
+### 查詢商品數量折扣
+- **端點**: `/products/{product_id}/discounts`
+- **方法**: `GET`
+- **查詢參數**:
+  - `quantity`: 指定數量（可選）
+- **回應** (200 OK):
+  ```json
+  [
+    {
+      "discount_id": "integer",
+      "product_id": "integer",
+      "quantity": "integer",
+      "price": "float"
+    }
+  ]
+  ```
+
+### 刪除商品數量折扣
+- **端點**: `/products/{product_id}/discounts/{discount_id}`
+- **方法**: `DELETE`
+- **回應** (200 OK):
+  ```json
+  {
+    "message": "Discount deleted successfully"
+  }
+  ```
+- **錯誤** (404 Not Found):
+  ```json
+  {
+    "detail": "Discount not found"
+  }
+  ```
+
 ## 類別相關 API
 
 ### 創建類別
@@ -219,35 +299,30 @@
   ```json
   {
     "category_id": "integer",
-    "category_name": "string"
+    "category_name": "string",
+    "create_time": "datetime"
   }
   ```
 
-### 新增商品類別
-- **端點**: `/products/{product_id}/categories/`
-- **方法**: `POST`
+### 獲取所有類別
+- **端點**: `/categories/`
+- **方法**: `GET`
+- **回應** (200 OK): 類別列表
+
+### 更新類別
+- **端點**: `/categories/{category_id}`
+- **方法**: `PUT`
 - **請求體**:
   ```json
   {
-    "category_ids": ["integer"]
+    "category_name": "string"
   }
   ```
-- **回應** (200 OK): 更新後的商品資訊，包含類別列表
+- **回應** (200 OK): 更新後的類別資訊
 - **錯誤** (404 Not Found):
   ```json
   {
-    "detail": "Product not found"
-  }
-  ```
-
-### 移除商品類別
-- **端點**: `/products/{product_id}/categories/{category_id}`
-- **方法**: `DELETE`
-- **回應** (200 OK): 更新後的商品資訊
-- **錯誤** (404 Not Found):
-  ```json
-  {
-    "detail": "Product not found"
+    "detail": "Category not found"
   }
   ```
 

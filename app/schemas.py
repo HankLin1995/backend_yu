@@ -50,7 +50,7 @@ class Photo(BaseModel):
 
 
 class ProductDiscount(BaseModel):
-    discount_id: int
+    # discount_id: int
     product_id: int
     quantity: int
     price: float
