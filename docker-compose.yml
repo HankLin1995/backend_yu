@@ -25,12 +25,12 @@ services:
       - DATABASE_URL=sqlite:///./test.db
     command: pytest -v
 
-  # cloudflared:
-  #   image: cloudflare/cloudflared:latest
-  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN}
-  #   networks:
-  #     - app-network
-  #   restart: unless-stopped
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN}
+    networks:
+      - app-network
+    restart: unless-stopped
 
 networks:
   app-network:
