@@ -17,7 +17,7 @@ class Customer(CustomerBase):
     line_id: str
     create_date: datetime
 
-    class Config:
+    class ConfigDict :
         from_attributes = True
 
 # Product schemas
@@ -39,7 +39,7 @@ class Product(ProductBase):
     create_time: datetime
     is_deleted: bool
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 class Photo(BaseModel):
@@ -63,7 +63,7 @@ class CategoryCreate(CategoryBase):
 class Category(CategoryBase):
     category_id: int
     
-    class Config:
+    class ConfigDict :
         from_attributes = True
 
 # Order schemas
@@ -83,7 +83,7 @@ class OrderDetail(BaseModel):
     subtotal: float
     product_deleted: bool = False
 
-    class Config:
+    class ConfigDict :
         from_attributes = True
 
 class OrderBase(BaseModel):
@@ -99,5 +99,5 @@ class Order(OrderBase):
     total_amount: float
     details: List[OrderDetail]
 
-    class Config:
+    class ConfigDict :
         from_attributes = True

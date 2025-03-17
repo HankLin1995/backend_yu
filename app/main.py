@@ -96,6 +96,23 @@ def get_product_discounts(product_id: int, quantity: int, db: Session = Depends(
 def remove_product_discount(product_id: int, discount_id: int, db: Session = Depends(get_db)):
     return crud.remove_product_discount(db=db, product_id=product_id, discount_id=discount_id)
 
+# 先刪除所有相關折扣後重新加入所有折扣
+@app.put("/products/{product_id}/discounts", tags=["products"])
+def update_product_discounts(product_id: int, discounts: List[schemas.ProductDiscount], db: Session = Depends(get_db)):
+    # 先刪除所有相關折扣
+    db.query(models.ProductDiscount).filter(models.ProductDiscount.product_id == product_id).delete()
+    db.commit()
+    
+    # 重新加入所有折扣
+    for discount in discounts:
+        db_discount = models.ProductDiscount(
+            product_id=product_id,
+            quantity=discount.quantity,
+            price=discount.price
+        )
+        db.add(db_discount)
+    db.commit()
+    return {"message": "Discounts updated"}
 
 
 # Category endpoints

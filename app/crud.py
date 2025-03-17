@@ -44,6 +44,12 @@ def delete_customer(db: Session, line_id: str):
 
 # Product CRUD operations
 def create_product(db: Session, product: schemas.ProductCreate):
+
+    # Check if product already exists
+    existing_product = db.query(models.Product).filter(models.Product.product_name == product.product_name).first()
+    if existing_product:
+        raise HTTPException(status_code=400, detail="Product already exists")
+
     db_product = models.Product(**product.model_dump())
     db.add(db_product)
     db.commit()

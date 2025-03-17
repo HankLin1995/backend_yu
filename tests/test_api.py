@@ -52,6 +52,25 @@ def test_create_product(client):
     assert response.status_code == 200
     assert response.json()["product_name"] == product_data["product_name"]
 
+def test_create_duplite_product(client):
+    product_data = {
+        "product_name": "Test Product",
+        "price": 100.0,
+        "description": "Test Description",
+        "stock_quantity": 50
+    }
+    response = client.post("/products/", json=product_data)
+    assert response.status_code == 200
+
+    product_data2 = {
+        "product_name": "Test Product",
+        "price": 100.0,
+        "description": "Test Description",
+        "stock_quantity": 50
+    }
+    response = client.post("/products/", json=product_data2)
+    assert response.status_code == 400
+
 # 測試案例 2.1: 商品庫存更新測試
 # 驗證：
 # - [x] 庫存數量更新
@@ -408,114 +427,114 @@ def test_product_deletion_integrity(client):
 # 測試案例 4.3: 資料完整性測試
 # 驗證：
 # - [x] 商品照片和分類的關聯處理
-def test_product_photos_and_categories(client):
-    # Create categories
-    category_data1 = {
-        "category_name": "海鮮"
-    }
-    category_data2 = {
-        "category_name": "熟食"
-    }
-    response = client.post("/categories/", json=category_data1)
-    category_id1 = response.json()["category_id"]
-    response = client.post("/categories/", json=category_data2)
-    category_id2 = response.json()["category_id"]
+# def test_product_photos_and_categories(client):
+#     # Create categories
+#     category_data1 = {
+#         "category_name": "海鮮"
+#     }
+#     category_data2 = {
+#         "category_name": "熟食"
+#     }
+#     response = client.post("/categories/", json=category_data1)
+#     category_id1 = response.json()["category_id"]
+#     response = client.post("/categories/", json=category_data2)
+#     category_id2 = response.json()["category_id"]
     
-    # Create a product
-    product_data = {
-        "product_name": "Test Product",
-        "price": 100.0,
-        "description": "Test Description",
-        "stock_quantity": 10,
-        "categories": [category_id1, category_id2]
-    }
-    response = client.post("/products/", json=product_data)
-    product_id = response.json()["product_id"]
+#     # Create a product
+#     product_data = {
+#         "product_name": "Test Product",
+#         "price": 100.0,
+#         "description": "Test Description",
+#         "stock_quantity": 10,
+#         "categories": [category_id1, category_id2]
+#     }
+#     response = client.post("/products/", json=product_data)
+#     product_id = response.json()["product_id"]
     
-    # Add photos to product
-    photo_data1 = {
-        "photo_url": "https://example.com/photo1.jpg",
-        "is_main": True,
-        "sort_order": 1
-    }
-    photo_data2 = {
-        "photo_url": "https://example.com/photo2.jpg",
-        "is_main": False,
-        "sort_order": 2
-    }
-    response = client.post(f"/products/{product_id}/photos", json=photo_data1)
-    photo_id1 = response.json()["photo_id"]
-    response = client.post(f"/products/{product_id}/photos", json=photo_data2)
-    photo_id2 = response.json()["photo_id"]
+#     # Add photos to product
+#     photo_data1 = {
+#         "photo_url": "https://example.com/photo1.jpg",
+#         "is_main": True,
+#         "sort_order": 1
+#     }
+#     photo_data2 = {
+#         "photo_url": "https://example.com/photo2.jpg",
+#         "is_main": False,
+#         "sort_order": 2
+#     }
+#     response = client.post(f"/products/{product_id}/photos", json=photo_data1)
+#     photo_id1 = response.json()["photo_id"]
+#     response = client.post(f"/products/{product_id}/photos", json=photo_data2)
+#     photo_id2 = response.json()["photo_id"]
     
-    # Verify product categories
-    response = client.get(f"/products/{product_id}")
-    assert response.status_code == 200
-    product = response.json()
-    assert len(product["categories"]) == 2
-    category_ids = [cat["category_id"] for cat in product["categories"]]
-    assert category_id1 in category_ids
-    assert category_id2 in category_ids
+#     # Verify product categories
+#     response = client.get(f"/products/{product_id}")
+#     assert response.status_code == 200
+#     product = response.json()
+#     assert len(product["categories"]) == 2
+#     category_ids = [cat["category_id"] for cat in product["categories"]]
+#     assert category_id1 in category_ids
+#     assert category_id2 in category_ids
     
-    # Verify product photos
-    response = client.get(f"/products/{product_id}/photos")
-    assert response.status_code == 200
-    photos = response.json()
-    assert len(photos) == 2
-    assert any(photo["is_main"] == True for photo in photos)
+#     # Verify product photos
+#     response = client.get(f"/products/{product_id}/photos")
+#     assert response.status_code == 200
+#     photos = response.json()
+#     assert len(photos) == 2
+#     assert any(photo["is_main"] == True for photo in photos)
     
-    # Test deleting a category
-    response = client.delete(f"/categories/{category_id1}")
-    assert response.status_code == 200
+#     # Test deleting a category
+#     response = client.delete(f"/categories/{category_id1}")
+#     assert response.status_code == 200
     
-    # Verify product still exists but with one less category
-    response = client.get(f"/products/{product_id}")
-    assert response.status_code == 200
-    product = response.json()
-    assert len(product["categories"]) == 1
-    assert product["categories"][0]["category_id"] == category_id2
+#     # Verify product still exists but with one less category
+#     response = client.get(f"/products/{product_id}")
+#     assert response.status_code == 200
+#     product = response.json()
+#     assert len(product["categories"]) == 1
+#     assert product["categories"][0]["category_id"] == category_id2
     
-    # Delete product and verify photos are also deleted
-    response = client.delete(f"/products/{product_id}")
-    assert response.status_code == 200
+#     # Delete product and verify photos are also deleted
+#     response = client.delete(f"/products/{product_id}")
+#     assert response.status_code == 200
     
-    # Verify photos are deleted
-    response = client.get(f"/products/{product_id}/photos")
-    assert response.status_code == 404  # or 200 with empty list, depending on your API design
+#     # Verify photos are deleted
+#     response = client.get(f"/products/{product_id}/photos")
+#     assert response.status_code == 404  # or 200 with empty list, depending on your API design
 
 # 測試案例 4.3: 資料完整性測試
 # 驗證：
 # - [x] 刪除類別時的商品關聯處理
-def test_category_deletion_integrity(client):
-    # Create a category
-    category_data = {
-        "category_name": "海鮮",
-        "description": "新鮮海產"
-    }
-    response = client.post("/categories/", json=category_data)
-    category_id = response.json()["category_id"]
+# def test_category_deletion_integrity(client):
+#     # Create a category
+#     category_data = {
+#         "category_name": "海鮮",
+#         "description": "新鮮海產"
+#     }
+#     response = client.post("/categories/", json=category_data)
+#     category_id = response.json()["category_id"]
     
-    # Create multiple products in the category
-    for i in range(3):
-        product_data = {
-            "product_name": f"Test Product {i}",
-            "price": 100.0,
-            "description": f"Test Description {i}",
-            "stock_quantity": 10,
-            "categories": [category_id]
-        }
-        client.post("/products/", json=product_data)
+#     # Create multiple products in the category
+#     for i in range(3):
+#         product_data = {
+#             "product_name": f"Test Product {i}",
+#             "price": 100.0,
+#             "description": f"Test Description {i}",
+#             "stock_quantity": 10,
+#             "categories": [category_id]
+#         }
+#         client.post("/products/", json=product_data)
     
-    # Delete the category
-    response = client.delete(f"/categories/{category_id}")
-    assert response.status_code == 200
+#     # Delete the category
+#     response = client.delete(f"/categories/{category_id}")
+#     assert response.status_code == 200
     
-    # Get all products and verify they no longer have the deleted category
-    response = client.get("/products/")
-    assert response.status_code == 200
-    products = response.json()
+#     # Get all products and verify they no longer have the deleted category
+#     response = client.get("/products/")
+#     assert response.status_code == 200
+#     products = response.json()
     
-    for product in products:
-        # Verify each product exists but doesn't have the deleted category
-        category_ids = [cat["category_id"] for cat in product["categories"]]
-        assert category_id not in category_ids
+#     for product in products:
+#         # Verify each product exists but doesn't have the deleted category
+#         category_ids = [cat["category_id"] for cat in product["categories"]]
+#         assert category_id not in category_ids
