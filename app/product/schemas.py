@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -11,24 +11,24 @@ class CategoryCreate(CategoryBase):
 class Category(CategoryBase):
     category_id: int
     
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-class PhotoBase(BaseModel):
+class ProductPhotoBase(BaseModel):
+    product_id: int
     file_path: str
     description: Optional[str] = None
     image_hash: str
 
-class PhotoCreate(PhotoBase):
+    model_config = ConfigDict(from_attributes=True)
+
+class ProductPhotoCreate(ProductPhotoBase):
     pass
 
-class Photo(PhotoBase):
+class ProductPhoto(ProductPhotoBase):
     photo_id: int
-    product_id: int
-    created_date: datetime
+    create_time: datetime
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductDiscountBase(BaseModel):
     quantity: int = Field(gt=0, description="購買數量")
@@ -41,8 +41,7 @@ class ProductDiscount(ProductDiscountBase):
     discount_id: int
     product_id: int
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductDiscountsCreate(BaseModel):
     discounts: List[ProductDiscountCreate]
@@ -66,8 +65,7 @@ class Product(ProductBase):
     product_id: int
     create_time: datetime
     categories: List[Category] = []
-    photos: List[Photo] = []
+    photos: List[ProductPhoto] = []
     discounts: List[ProductDiscount] = []
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

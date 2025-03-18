@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db import get_db
-from . import models, schemas
+from . import models
+from ..product import schemas
 import os
 from datetime import datetime
 import hashlib
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 UPLOAD_DIR = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.post("/upload/", response_model=schemas.Photo)
+@router.post("/upload/", response_model=schemas.ProductPhoto)
 async def upload_photo(
     file: UploadFile = File(...),
     product_id: int = Form(...),
@@ -27,7 +28,7 @@ async def upload_photo(
         product_id: Product ID to associate with the photo
         
     Returns:
-        Photo: Created photo record
+        ProductPhoto: Created photo record
     """
     # Validate file type
     allowed_types = [".jpg", ".jpeg", ".png", ".gif"]
@@ -54,8 +55,8 @@ async def upload_photo(
         file_hash = hashlib.md5(contents).hexdigest()
             
         # Check for duplicate image
-        existing_photo = db.query(models.Photo).filter(
-            models.Photo.ImageHash == file_hash
+        existing_photo = db.query(models.ProductPhoto).filter(
+            models.ProductPhoto.image_hash == file_hash
         ).first()
         if existing_photo:
             # If file exists, delete the uploaded file
@@ -63,10 +64,10 @@ async def upload_photo(
             raise HTTPException(status_code=400, detail="This photo already exists")
         
         # Create database record
-        db_photo = models.Photo(
-            ProductID=product_id,
-            FilePath=new_filename,
-            ImageHash=file_hash
+        db_photo = models.ProductPhoto(
+            product_id=product_id,
+            file_path=new_filename,
+            image_hash=file_hash
         )
         
         db.add(db_photo)
@@ -83,10 +84,10 @@ async def upload_photo(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
-@router.get("/{photo_id}", response_model=schemas.Photo)
+@router.get("/{photo_id}", response_model=schemas.ProductPhoto)
 def get_photo(photo_id: int, db: Session = Depends(get_db)):
     """Get photo by ID"""
-    photo = db.query(models.Photo).filter(models.Photo.PhotoID == photo_id).first()
+    photo = db.query(models.ProductPhoto).filter(models.ProductPhoto.photo_id == photo_id).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     return photo
@@ -94,12 +95,12 @@ def get_photo(photo_id: int, db: Session = Depends(get_db)):
 @router.delete("/{photo_id}")
 def delete_photo(photo_id: int, db: Session = Depends(get_db)):
     """Delete photo by ID"""
-    photo = db.query(models.Photo).filter(models.Photo.PhotoID == photo_id).first()
+    photo = db.query(models.ProductPhoto).filter(models.ProductPhoto.photo_id == photo_id).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     
     # Delete physical file
-    file_path = os.path.join(UPLOAD_DIR, photo.FilePath)
+    file_path = os.path.join(UPLOAD_DIR, photo.file_path)
     if os.path.exists(file_path):
         os.remove(file_path)
     
