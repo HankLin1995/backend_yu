@@ -1,0 +1,164 @@
+import pytest
+from fastapi.testclient import TestClient
+import io
+from PIL import Image
+import os
+import hashlib
+
+def create_test_image():
+    """Helper function to create a test image"""
+    file = io.BytesIO()
+    image = Image.new('RGB', size=(100, 100), color=(255, 0, 0))
+    image.save(file, 'png')
+    file.name = 'test.png'
+    file.seek(0)
+    return file
+
+def test_upload_photo(client):
+    # Create a test product first
+    product_data = {
+        "product_name": "Test Product",
+        "description": "A test product description",
+        "price": 1000,  # $10.00
+        "one_set_price": 1000,
+        "one_set_quantity": 5,
+        "stock_quantity": 100,
+        "unit": "個"
+    }
+    product_response = client.post("/products/", json=product_data)
+    assert product_response.status_code == 200
+    product_id = product_response.json()["product_id"]
+
+    # Upload photo
+    test_image = create_test_image()
+    files = {"file": ("test.png", test_image, "image/png")}
+
+    form_data = {"product_id": product_id}
+
+    response = client.post(
+        f"/photos/upload/",
+        files=files,
+        data=form_data
+    )
+    assert response.status_code == 200
+    assert response.json()["ProductID"] == product_id
+    assert response.json()["FilePath"].endswith(".png")
+    assert response.json()["ImageHash"]
+    
+    # Clean up test file
+    file_path = os.path.join("uploads", response.json()["FilePath"])
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+# def test_upload_duplicate_photo(client):
+#     # Create a test product
+#     product_data = {
+#         "product_name": "Test Product 2",
+#         "description": "A test product description",
+#         "price": 1000,  # $10.00
+#         "one_set_price": 1000,
+#         "one_set_quantity": 5,
+#         "stock_quantity": 100,
+#         "unit": "個"
+#     }
+#     product_response = client.post("/products/", json=product_data)
+#     assert product_response.status_code == 200
+#     product_id = product_response.json()["product_id"]
+
+#     # Upload first photo
+#     test_image = create_test_image()
+#     files = {"file": ("test.png", test_image, "image/png")}
+#     first_response = client.post(
+#         f"/photos/upload/?product_id={product_id}",
+#         files=files
+#     )
+#     assert first_response.status_code == 200
+#     first_file_path = os.path.join("uploads", first_response.json()["FilePath"])
+
+#     # Try to upload the same photo again
+#     test_image.seek(0)
+#     files = {"file": ("test2.png", test_image, "image/png")}
+#     second_response = client.post(
+#         f"/photos/upload/?product_id={product_id}",
+#         files=files
+#     )
+#     assert second_response.status_code == 400
+#     assert "This photo already exists" in second_response.json()["detail"]
+
+#     # Clean up test file
+#     if os.path.exists(first_file_path):
+#         os.remove(first_file_path)
+
+# def test_get_photo(client):
+#     # Create a test product
+#     product_data = {
+#         "product_name": "Test Product 3",
+#         "description": "A test product description",
+#         "price": 1000,  # $10.00
+#         "one_set_price": 1000,
+#         "one_set_quantity": 5,
+#         "stock_quantity": 100,
+#         "unit": "個"
+#     }
+#     product_response = client.post("/products/", json=product_data)
+#     assert product_response.status_code == 200
+#     product_id = product_response.json()["product_id"]
+
+#     # Upload photo
+#     test_image = create_test_image()
+#     files = {"file": ("test.png", test_image, "image/png")}
+#     upload_response = client.post(
+#         f"/photos/upload/?product_id={product_id}",
+#         files=files
+#     )
+#     assert upload_response.status_code == 200
+#     photo_id = upload_response.json()["PhotoID"]
+#     file_path = os.path.join("uploads", upload_response.json()["FilePath"])
+
+#     # Get photo
+#     response = client.get(f"/photos/{photo_id}")
+#     assert response.status_code == 200
+#     assert response.json()["PhotoID"] == photo_id
+#     assert response.json()["ProductID"] == product_id
+
+#     # Clean up test file
+#     if os.path.exists(file_path):
+#         os.remove(file_path)
+
+# def test_delete_photo(client):
+#     # Create a test product
+#     product_data = {
+#         "product_name": "Test Product 4",
+#         "description": "Test Description",
+#         "price": 1000,
+#         "stock_quantity": 100,
+#         "unit": "個"
+#     }
+#     product_response = client.post("/products/", json=product_data)
+#     assert product_response.status_code == 200
+#     product_id = product_response.json()["product_id"]
+
+#     # Upload photo
+#     test_image = create_test_image()
+#     files = {"file": ("test.png", test_image, "image/png")}
+#     upload_response = client.post(
+#         f"/photos/upload/?product_id={product_id}",
+#         files=files
+#     )
+#     assert upload_response.status_code == 200
+#     photo_id = upload_response.json()["PhotoID"]
+#     file_path = os.path.join("uploads", upload_response.json()["FilePath"])
+
+#     # Verify file exists
+#     assert os.path.exists(file_path)
+
+#     # Delete photo
+#     delete_response = client.delete(f"/photos/{photo_id}")
+#     assert delete_response.status_code == 200
+
+#     # Verify photo is deleted from database
+#     get_response = client.get(f"/photos/{photo_id}")
+#     assert get_response.status_code == 404
+
+#     # Verify file is deleted from filesystem
+#     assert not os.path.exists(file_path)

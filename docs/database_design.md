@@ -29,8 +29,10 @@
 |---------|----------|------|------|
 | product_id | int | 商品編號 | 主鍵 |
 | product_name | varchar | 商品名稱 | |
-| price | decimal | 原價 | |
-| specail_price | decimal | 特價 | 可為空值 |
+| price | decimal | 單價 | |
+| unit | varchar | 單位 | |
+| one_set_price | decimal | 一組價格 | |
+| one_set_quantity | int | 一組數量 | |
 | stock_quantity | int | 庫存數量 | |
 | description | text | 商品描述 | |
 | create_time | datetime | 建立時間 | |

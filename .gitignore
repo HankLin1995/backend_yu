@@ -1,16 +1,39 @@
-# 忽略虚拟环境
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
 venv/
+env/
+ENV/
 etc/
 Lib/
 Scripts/
 share/
-**/__pycache__
+Include/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+
+# Project specific
 .streamlit/secrets.toml
 *.cfg
 ngrok.exe
 photos/
 photos_result/
 photos_delete/
-Include/
-*.db
-.env
