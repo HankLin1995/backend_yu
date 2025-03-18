@@ -4,7 +4,7 @@ import io
 from PIL import Image
 import os
 import hashlib
-from .conftest import TEST_UPLOAD_DIR
+from app.photo.routes import get_upload_dir
 
 def create_test_image():
     """Helper function to create a test image"""
@@ -46,7 +46,7 @@ def test_upload_photo(client):
     assert response.json()["image_hash"]
     
     # Clean up test file
-    file_path = os.path.join(TEST_UPLOAD_DIR, response.json()["file_path"])
+    file_path = os.path.join(get_upload_dir(), response.json()["file_path"])
     if os.path.exists(file_path):
         os.remove(file_path)
 
@@ -75,7 +75,7 @@ def test_upload_duplicate_photo(client):
         data=form_data
     )
     assert first_response.status_code == 200
-    first_file_path = os.path.join(TEST_UPLOAD_DIR, first_response.json()["file_path"])
+    first_file_path = os.path.join(get_upload_dir(), first_response.json()["file_path"])
 
     # Try to upload the same photo again
     test_image.seek(0)
@@ -118,7 +118,7 @@ def test_get_photo(client):
     )
     assert upload_response.status_code == 200
     photo_id = upload_response.json()["photo_id"]
-    file_path = os.path.join(TEST_UPLOAD_DIR, upload_response.json()["file_path"])
+    file_path = os.path.join(get_upload_dir(), upload_response.json()["file_path"])
 
     # Get photo
     response = client.get(f"/photos/{photo_id}")
@@ -131,9 +131,6 @@ def test_get_photo(client):
         os.remove(file_path)
 
 def test_delete_photo(client):
-    
-    UPLOAD_DIR = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
-
     # Create a test product
     product_data = {
         "product_name": "Test Product 4",
@@ -159,7 +156,7 @@ def test_delete_photo(client):
     )
     assert upload_response.status_code == 200
     photo_id = upload_response.json()["photo_id"]
-    file_path = os.path.join(UPLOAD_DIR, upload_response.json()["file_path"])
+    file_path = os.path.join(get_upload_dir(), upload_response.json()["file_path"])
 
     # Verify file exists
     assert os.path.exists(file_path)

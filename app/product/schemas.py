@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
+from app.photo.schemas import Photo
 
 class CategoryBase(BaseModel):
     category_name: str
@@ -11,23 +12,6 @@ class CategoryCreate(CategoryBase):
 class Category(CategoryBase):
     category_id: int
     
-    model_config = ConfigDict(from_attributes=True)
-
-class ProductPhotoBase(BaseModel):
-    product_id: int
-    file_path: str
-    description: Optional[str] = None
-    image_hash: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-class ProductPhotoCreate(ProductPhotoBase):
-    pass
-
-class ProductPhoto(ProductPhotoBase):
-    photo_id: int
-    create_time: datetime
-
     model_config = ConfigDict(from_attributes=True)
 
 class ProductDiscountBase(BaseModel):
@@ -65,7 +49,7 @@ class Product(ProductBase):
     product_id: int
     create_time: datetime
     categories: List[Category] = []
-    photos: List[ProductPhoto] = []
+    photos: List[Photo] = []
     discounts: List[ProductDiscount] = []
 
     model_config = ConfigDict(from_attributes=True)

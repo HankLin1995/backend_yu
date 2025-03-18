@@ -23,18 +23,6 @@ engine = create_engine(
 # Create session factory
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Set up test upload directory
-TEST_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_uploads")# os.path.join(os.path.dirname(__file__), "test_uploads")
-
-@pytest.fixture(scope="function")
-def upload_dir():
-    """Create a temporary upload directory for tests"""
-    os.environ["UPLOAD_DIR"] = TEST_UPLOAD_DIR
-    os.makedirs(TEST_UPLOAD_DIR, exist_ok=True)
-    yield TEST_UPLOAD_DIR
-    # Clean up after test
-    if os.path.exists(TEST_UPLOAD_DIR):
-        shutil.rmtree(TEST_UPLOAD_DIR)
 
 @pytest.fixture(scope="function")
 def db_session():

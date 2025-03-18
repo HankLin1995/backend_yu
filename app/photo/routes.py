@@ -10,11 +10,13 @@ import hashlib
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
-# Set upload directory path, create if not exists
-UPLOAD_DIR = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+def get_upload_dir():
+    """Get the upload directory path from environment or default"""
+    upload_dir = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
+    os.makedirs(upload_dir, exist_ok=True)
+    return upload_dir
 
-@router.post("/upload/", response_model=schemas.ProductPhoto)
+@router.post("/upload/", response_model=schemas.Photo)
 async def upload_photo(
     file: UploadFile = File(...),
     product_id: int = Form(...),
@@ -44,7 +46,7 @@ async def upload_photo(
         # Generate unique filename with timestamp
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         new_filename = f"{timestamp}{file_extension}"
-        file_path = os.path.join(UPLOAD_DIR, new_filename)
+        file_path = os.path.join(get_upload_dir(), new_filename)
         
         # Save file
         contents = await file.read()
@@ -84,7 +86,7 @@ async def upload_photo(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
-@router.get("/{photo_id}", response_model=schemas.ProductPhoto)
+@router.get("/{photo_id}", response_model=schemas.Photo)
 def get_photo(photo_id: int, db: Session = Depends(get_db)):
     """Get photo by ID"""
     photo = db.query(models.ProductPhoto).filter(models.ProductPhoto.photo_id == photo_id).first()
@@ -100,7 +102,7 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Photo not found")
     
     # Delete physical file
-    file_path = os.path.join(UPLOAD_DIR, photo.file_path)
+    file_path = os.path.join(get_upload_dir(), photo.file_path)
     if os.path.exists(file_path):
         os.remove(file_path)
     
