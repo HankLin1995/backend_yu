@@ -38,3 +38,35 @@ def test_get_categories(client):
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 3
+
+def test_create_product_category(client):
+    # Create a category first
+    category_data = {
+        "category_name": "Product Category"
+    }
+    category_response = client.post("/categories/", json=category_data)
+    assert category_response.status_code == 200
+    category = category_response.json()
+
+    # Create a product
+    product_data = {
+        "product_name": "Test Product",
+        "description": "A test product description",
+        "price": 1000,  # $10.00
+        "one_set_price": 1000,
+        "one_set_quantity": 5,
+        "stock_quantity": 100,
+        "unit": "個"
+    }
+    product_response = client.post("/products/", json=product_data)
+    assert product_response.status_code == 200
+    product = product_response.json()
+
+    # Create a product category
+    product_category_data = {
+        "product_id": product["product_id"],
+        "category_id": category["category_id"]
+    }
+
+    response = client.post("/products-categories/", json=product_category_data)
+    assert response.status_code == 200

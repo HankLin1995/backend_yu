@@ -21,6 +21,13 @@ class ProductDiscountBase(BaseModel):
 class ProductDiscountCreate(ProductDiscountBase):
     pass
 
+class ProductCategory(BaseModel):
+    product_id: int
+    category_id: int
+
+class ProductCategoryCreate(ProductCategory):
+    pass
+
 class ProductDiscount(ProductDiscountBase):
     discount_id: int
     product_id: int

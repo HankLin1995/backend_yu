@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_,insert
 from typing import List, Optional
 import hashlib
 from datetime import datetime
@@ -146,6 +146,58 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
     db.delete(category)
     db.commit()
     return {"message": "Category deleted successfully"}
+
+# Product Category Routes
+
+@router.post("/products-categories/", tags=["Product Categories"])
+
+def create_product_category(
+    product_category: schemas.ProductCategoryCreate, db: Session = Depends(get_db)
+):
+    # Check if the product and category exist in the database
+    product = db.query(models.Product).filter(models.Product.product_id == product_category.product_id).first()
+    category = db.query(models.Category).filter(models.Category.category_id == product_category.category_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    db_product_category = models.ProductsCategories(
+        product_id=product_category.product_id,
+        category_id=product_category.category_id
+    )
+    db.add(db_product_category)
+    db.commit
+
+    return {"message": "Product category association created successfully"}
+
+# def add_product_category(product_category:schemas.ProductCategory, db: Session = Depends(get_db)):
+#     product = db.query(models.Product).filter(models.Product.product_id ==  product_category.product_id).first()
+#     if not product:
+#         raise HTTPException(status_code=404, detail="Product not found")
+#     category = db.query(models.Category).filter(models.Category.category_id == product_category.category_id).first()
+#     if not category:
+#         raise HTTPException(status_code=404, detail="Category not found")
+    
+#     db_product_category = models.ProductsCategories(
+#         product_id = product_category.product_id,
+#         category_id = product_category.category_id
+#     )
+#     db.add(db_product_category)
+#     db.commit()
+#     return {"message": "Category added successfully"}
+
+@router.delete("/products/{product_id}/categories", tags=["Product Categories"])
+
+def delete_all_product_categories(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product.categories = []
+    db.commit()
+    return {"message": "All categories deleted successfully"}
 
 # Product Discount Routes
 

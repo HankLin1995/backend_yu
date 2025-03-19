@@ -3,14 +3,21 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..db import Base
 
-# 商品與類別的多對多關聯表
-products_categories = Table(
-    'products_categories',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('product_id', Integer, ForeignKey('products.product_id')),
-    Column('categories_id', Integer, ForeignKey('categories.category_id'))
-)
+# # # 商品與類別的多對多關聯表
+# products_categories = Table(
+#     'products_categories',
+#     Base.metadata,
+#     Column('id', Integer, primary_key=True),
+#     Column('product_id', Integer, ForeignKey('products.product_id')),
+#     Column('categories_id', Integer, ForeignKey('categories.category_id'))
+# )
+
+class ProductsCategories(Base):
+    __tablename__ = "products_categories"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey("products.product_id")) # 商品ID
+    category_id = Column(Integer, ForeignKey("categories.category_id")) # 類別ID
 
 class Product(Base):
     __tablename__ = "products"
@@ -26,7 +33,7 @@ class Product(Base):
     create_time = Column(DateTime, default=datetime.utcnow)
     # is_deleted = Column(Boolean, default=False)
     
-    categories = relationship("Category", secondary=products_categories, back_populates="products")
+    categories = relationship("Category", secondary="products_categories", back_populates="products")
     photos = relationship("ProductPhoto", back_populates="product")
     # orders = relationship("OrderDetail", back_populates="product")
     discounts = relationship("ProductDiscount", back_populates="product")
@@ -37,7 +44,7 @@ class Category(Base):
     category_id = Column(Integer, primary_key=True, index=True)
     category_name = Column(String, index=True)
     
-    products = relationship("Product", secondary=products_categories, back_populates="categories")
+    products = relationship("Product", secondary="products_categories", back_populates="categories")
 
 class ProductDiscount(Base):
     __tablename__ = "product_discounts"
