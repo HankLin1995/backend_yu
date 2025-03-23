@@ -25,7 +25,7 @@ class Product(Base):
     product_id = Column(Integer, primary_key=True, index=True)
     product_name = Column(String, index=True)
     description = Column(String)
-    price = Column(Integer)  # 價格
+    price = Column(Float)  # 價格
     one_set_price = Column(Integer, nullable=True)  # 一組價格
     one_set_quantity = Column(Integer, nullable=True)  # 一組數量
     stock_quantity = Column(Integer)  # 庫存
