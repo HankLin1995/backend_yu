@@ -70,3 +70,6 @@ def test_create_product_category(client):
 
     response = client.post("/products-categories/", json=product_category_data)
     assert response.status_code == 200
+    data = response.json()
+    assert data["product_id"] == product["product_id"]
+    assert data["category_id"] == category["category_id"]

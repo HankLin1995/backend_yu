@@ -169,10 +169,12 @@ def create_product_category(
         category_id=product_category.category_id
     )
     db.add(db_product_category)
-    db.commit
-    db.refresh(db_product_category)
+    db.commit()
 
-    return {"message": "Product category association created successfully"}
+    return {
+        "product_id": product_category.product_id,
+        "category_id": product_category.category_id
+    }
 
 # def add_product_category(product_category:schemas.ProductCategory, db: Session = Depends(get_db)):
 #     product = db.query(models.Product).filter(models.Product.product_id ==  product_category.product_id).first()
