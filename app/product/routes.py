@@ -170,6 +170,7 @@ def create_product_category(
     )
     db.add(db_product_category)
     db.commit
+    db.refresh(db_product_category)
 
     return {"message": "Product category association created successfully"}
 
