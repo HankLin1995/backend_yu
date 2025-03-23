@@ -7,7 +7,7 @@ services:
       - "8001:8000"
     volumes:
       # - .:/app
-      - "${PHOTOS_PATH}:/app/uploads"
+      - "${PHOTOS_PATH}:/app/app/uploads"
       - "${PHOTOS_PATH}/data:/app/data"
     environment:
       - ENVIRONMENT=production
