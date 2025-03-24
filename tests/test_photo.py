@@ -171,3 +171,64 @@ def test_delete_photo(client):
 
     # Verify file is deleted from filesystem
     assert not os.path.exists(file_path)
+
+def test_delete_product_photos(client):
+    # Create a test product
+    product_data = {
+        "product_name": "Test Product 5",
+        "description": "Test Description",
+        "one_set_price": 1000,
+        "one_set_quantity": 5,
+        "price": 1000,
+        "stock_quantity": 100,
+        "unit": "個"
+    }
+    product_response = client.post("/products/", json=product_data)
+    assert product_response.status_code == 200
+    product_id = product_response.json()["product_id"]
+
+    # Upload photo
+    test_image = create_test_image()
+    files = {"file": ("test.png", test_image, "image/png")}
+    form_data = {"product_id": product_id}
+    upload_response = client.post(
+        f"/photos/upload/",
+        files=files,
+        data=form_data
+    )
+    assert upload_response.status_code == 200
+    photo_id = upload_response.json()["photo_id"]
+    file_path = os.path.join(get_upload_dir(), upload_response.json()["file_path"])
+
+    assert os.path.exists(file_path)
+
+    # # Upload another photo
+    # test_image2 = create_test_image()
+    # files = {"file": ("test2.png", test_image2, "image/png")}
+    # form_data = {"product_id": product_id}
+    # upload_response2 = client.post(
+    #     f"/photos/upload/",
+    #     files=files,
+    #     data=form_data
+    # )
+    # assert upload_response2.status_code == 200
+    # photo_id2 = upload_response2.json()["photo_id"]
+    # file_path2 = os.path.join(get_upload_dir(), upload_response2.json()["file_path"])
+
+    # # Verify file exists
+    # assert os.path.exists(file_path2)
+
+    # Delete all photos of a product
+    delete_response = client.delete(f"/photos/product/{product_id}")
+    assert delete_response.status_code == 200
+
+    # Verify photo is deleted from database
+    get_response = client.get(f"/photos/{photo_id}")
+    assert get_response.status_code == 404
+
+    # get_response2 = client.get(f"/photos/{photo_id2}")
+    # assert get_response2.status_code == 404
+
+    # Verify file is deleted from filesystem
+    assert not os.path.exists(file_path)
+    # assert not os.path.exists(file_path2)

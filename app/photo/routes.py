@@ -94,6 +94,18 @@ def get_photo(photo_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Photo not found")
     return photo
 
+@router.delete("/product/{product_id}")
+def delete_product_photos(product_id: int, db: Session = Depends(get_db)):
+    """Delete all photos of a product"""
+    photos = db.query(models.ProductPhoto).filter(models.ProductPhoto.product_id == product_id).all()
+    for photo in photos:
+        file_path = os.path.join(get_upload_dir(), photo.file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        db.delete(photo)
+    db.commit()
+    return {"message": "All photos deleted successfully"}
+
 @router.delete("/{photo_id}")
 def delete_photo(photo_id: int, db: Session = Depends(get_db)):
     """Delete photo by ID"""
