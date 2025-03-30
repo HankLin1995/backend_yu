@@ -8,7 +8,8 @@ from app.db import create_tables
 app = FastAPI(
     title="Backend API",
     description="Backend API for engineering project management",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False
 )
 
 # Configure CORS
