@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.product.routes import router as product_router
 from app.photo.routes import router as photo_router
 from app.db import create_tables
+from fastapi.staticfiles import StaticFiles
 
 # Create FastAPI application
 app = FastAPI(
@@ -11,6 +12,8 @@ app = FastAPI(
     version="1.0.0",
     redirect_slashes=False
 )
+
+app.mount("/static", StaticFiles(directory="/app/app/uploads"), name="static")
 
 # Configure CORS
 app.add_middleware(
