@@ -17,6 +17,7 @@
 | 欄位名稱 | 資料型態 | 說明 | 備註 |
 |---------|----------|------|------|
 | line_id | varchar | LINE ID | 主鍵 |
+| name | varchar | 客戶名稱 | |
 | line_name | varchar | LINE 名稱 | |
 | line_pic_url | varchar | LINE 頭像 URL | |
 | phone | varchar | 電話號碼 | |

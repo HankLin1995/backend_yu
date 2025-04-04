@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.product.routes import router as product_router
 from app.photo.routes import router as photo_router
+from app.customer.routes import router as customer_router
 from app.db import create_tables
 from fastapi.staticfiles import StaticFiles
 
@@ -27,6 +28,7 @@ app.add_middleware(
 # Register routes
 app.include_router(product_router)
 app.include_router(photo_router)
+app.include_router(customer_router)
 
 # Create database tables
 create_tables()
