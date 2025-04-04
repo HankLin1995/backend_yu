@@ -5,6 +5,48 @@
 
 ## 客戶相關 API
 
+### 取得所有客戶
+- **端點**: `/customers/`
+- **方法**: `GET`
+- **回應** (200 OK):
+  ```json
+  [
+    {
+      "line_id": "string",
+      "line_name": "string",
+      "name": "string",
+      "line_pic_url": "string",
+      "phone": "string",
+      "email": "string",
+      "address": "string",
+      "create_date": "datetime"
+    }
+  ]
+  ```
+
+### 取得單一客戶
+- **端點**: `/customers/{line_id}`
+- **方法**: `GET`
+- **回應** (200 OK):
+  ```json
+  {
+    "line_id": "string",
+    "line_name": "string",
+    "name": "string",
+    "line_pic_url": "string",
+    "phone": "string",
+    "email": "string",
+    "address": "string",
+    "create_date": "datetime"
+  }
+  ```
+- **錯誤** (404 Not Found):
+  ```json
+  {
+    "detail": "Customer not found"
+  }
+  ```
+
 ### 創建客戶
 - **端點**: `/customers/`
 - **方法**: `POST`
@@ -13,8 +55,9 @@
   {
     "line_id": "string",
     "line_name": "string",
-    "line_pic_url": "string",
-    "phone": "string",
+    "name": "string (optional)",
+    "line_pic_url": "string (optional)",
+    "phone": "string (optional)",
     "email": "string (optional)",
     "address": "string (optional)"
   }
@@ -24,6 +67,7 @@
   {
     "line_id": "string",
     "line_name": "string",
+    "name": "string",
     "line_pic_url": "string",
     "phone": "string",
     "email": "string",
@@ -45,8 +89,9 @@
   ```json
   {
     "line_name": "string",
-    "line_pic_url": "string",
-    "phone": "string",
+    "name": "string (optional)",
+    "line_pic_url": "string (optional)",
+    "phone": "string (optional)",
     "email": "string (optional)",
     "address": "string (optional)"
   }

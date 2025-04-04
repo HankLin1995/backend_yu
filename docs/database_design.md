@@ -10,6 +10,8 @@
 5. orders (訂單主表)
 6. order_details (訂單明細)
 7. product_photos (商品照片)
+8. pickup_locations (取貨地點)
+9. schedules (日程表)
 
 ## 詳細資料表結構
 
@@ -81,12 +83,37 @@
 | unit_price | decimal | 單價 | |
 | subtotal | decimal | 小計 | |
 
+### 8. pickup_locations (取貨地點)
+| 欄位名稱 | 資料型態 | 說明 | 備註 |
+|---------|----------|------|------|
+| location_id | int | 地點編號 | 主鍵 |
+| district | varchar | 鄉鎮市 | |
+| name | varchar | 地點名稱 | |
+| address | text | 地址 | 可為空 |
+| coordinate_x | decimal(10,6) | 座標X | 可為空 |
+| coordinate_y | decimal(10,6) | 座標Y | 可為空 |
+| photo_path | varchar | 照片路徑 | 可為空 |
+| create_time | datetime | 建立時間 | |
+
+### 9. schedules (日程表)
+| 欄位名稱 | 資料型態 | 說明 | 備註 |
+|---------|----------|------|------|
+| schedule_id | int | 日程編號 | 主鍵 |
+| date | date | 日期 | 與 location_id 共同構成唯一索引 |
+| location_id | int | 取貨地點編號 | 外鍵參考 pickup_locations.location_id，與 date 共同構成唯一索引 |
+| pickup_start_time | time | 取貨時間起 | |
+| pickup_end_time | time | 取貨時間迄 | |
+| status | varchar | 狀態 | 預設為 ACTIVE |
+| create_time | datetime | 建立時間 | |
+
 ## 資料表關聯說明
 
 1. 一個商品可以屬於多個類別，一個類別可以包含多個商品 (多對多關係，透過 products_categories 表實現)
 2. 一個訂單對應一個客戶 (一對多關係)
 3. 一個訂單可以包含多個商品項目 (一對多關係，透過 order_details 表實現)
 4. 一個商品可以有多張照片 (一對多關係)
+5. 取貨地點為獨立資料表，可供訂單參考使用
+6. 一個日期可以對應多個取貨地點，但同一天同一地點不能重複排程 (透過 date 和 location_id 的複合索引確保)
 
 ## 注意事項
 
