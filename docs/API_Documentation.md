@@ -519,6 +519,256 @@
 }
 ```
 
+## 取貨地點 API
+
+### 1. 創建取貨地點
+
+**端點:** POST /locations/
+
+**請求體:**
+```json
+{
+    "district": "北港",
+    "name": "北港圖書館前",
+    "address": "雲林縣北港鎮文化路123號",
+    "coordinate_x": 120.123456,
+    "coordinate_y": 23.123456,
+    "photo_path": "optional/path/to/photo.jpg"
+}
+```
+
+**回應:**
+```json
+{
+    "location_id": 1,
+    "district": "北港",
+    "name": "北港圖書館前",
+    "address": "雲林縣北港鎮文化路123號",
+    "coordinate_x": 120.123456,
+    "coordinate_y": 23.123456,
+    "photo_path": "optional/path/to/photo.jpg",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+### 2. 獲取取貨地點列表
+
+**端點:** GET /locations/
+
+**查詢參數:**
+- skip (optional): 跳過的記錄數，預設為0
+- limit (optional): 返回的最大記錄數，預設為100
+
+**回應:**
+```json
+[
+    {
+        "location_id": 1,
+        "district": "北港",
+        "name": "北港圖書館前",
+        "address": "雲林縣北港鎮文化路123號",
+        "coordinate_x": 120.123456,
+        "coordinate_y": 23.123456,
+        "photo_path": "optional/path/to/photo.jpg",
+        "create_time": "2025-04-04T13:30:00"
+    }
+]
+```
+
+### 3. 獲取特定取貨地點
+
+**端點:** GET /locations/{location_id}
+
+**回應:**
+```json
+{
+    "location_id": 1,
+    "district": "北港",
+    "name": "北港圖書館前",
+    "address": "雲林縣北港鎮文化路123號",
+    "coordinate_x": 120.123456,
+    "coordinate_y": 23.123456,
+    "photo_path": "optional/path/to/photo.jpg",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+### 4. 更新取貨地點
+
+**端點:** PUT /locations/{location_id}
+
+**請求體:**
+```json
+{
+    "district": "北港",
+    "name": "北港圖書館前(新)",
+    "address": "雲林縣北港鎮文化路123號",
+    "coordinate_x": 120.123456,
+    "coordinate_y": 23.123456,
+    "photo_path": "optional/path/to/photo.jpg"
+}
+```
+
+**回應:**
+```json
+{
+    "location_id": 1,
+    "district": "北港",
+    "name": "北港圖書館前(新)",
+    "address": "雲林縣北港鎮文化路123號",
+    "coordinate_x": 120.123456,
+    "coordinate_y": 23.123456,
+    "photo_path": "optional/path/to/photo.jpg",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+### 5. 刪除取貨地點
+
+**端點:** DELETE /locations/{location_id}
+
+**回應:**
+```json
+{
+    "message": "Location deleted successfully"
+}
+```
+
+## 日程表 API
+
+### 1. 創建日程
+
+**端點:** POST /schedules/
+
+**請求體:**
+```json
+{
+    "date": "2025-04-02",
+    "location_id": 1,
+    "pickup_start_time": "17:00:00",
+    "pickup_end_time": "17:30:00",
+    "status": "ACTIVE"
+}
+```
+
+**回應:**
+```json
+{
+    "schedule_id": 1,
+    "date": "2025-04-02",
+    "location_id": 1,
+    "pickup_start_time": "17:00:00",
+    "pickup_end_time": "17:30:00",
+    "status": "ACTIVE",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+**注意:** 同一天同一地點不能重複排程
+
+### 2. 獲取日程列表
+
+**端點:** GET /schedules/
+
+**查詢參數:**
+- skip (optional): 跳過的記錄數，預設為0
+- limit (optional): 返回的最大記錄數，預設為100
+- date_filter (optional): 按日期篩選，格式：YYYY-MM-DD
+
+**回應:**
+```json
+[
+    {
+        "schedule_id": 1,
+        "date": "2025-04-02",
+        "location_id": 1,
+        "pickup_start_time": "17:00:00",
+        "pickup_end_time": "17:30:00",
+        "status": "ACTIVE",
+        "create_time": "2025-04-04T13:30:00"
+    }
+]
+```
+
+### 3. 獲取特定日程
+
+**端點:** GET /schedules/{schedule_id}
+
+**回應:**
+```json
+{
+    "schedule_id": 1,
+    "date": "2025-04-02",
+    "location_id": 1,
+    "pickup_start_time": "17:00:00",
+    "pickup_end_time": "17:30:00",
+    "status": "ACTIVE",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+### 4. 更新日程
+
+**端點:** PUT /schedules/{schedule_id}
+
+**請求體:**
+```json
+{
+    "date": "2025-04-02",
+    "location_id": 1,
+    "pickup_start_time": "17:30:00",
+    "pickup_end_time": "18:00:00",
+    "status": "ACTIVE"
+}
+```
+
+**回應:**
+```json
+{
+    "schedule_id": 1,
+    "date": "2025-04-02",
+    "location_id": 1,
+    "pickup_start_time": "17:30:00",
+    "pickup_end_time": "18:00:00",
+    "status": "ACTIVE",
+    "create_time": "2025-04-04T13:30:00"
+}
+```
+
+### 5. 刪除日程
+
+**端點:** DELETE /schedules/{schedule_id}
+
+**回應:**
+```json
+{
+    "message": "Schedule deleted successfully"
+}
+```
+
+**錯誤處理：**
+
+1. 當嘗試創建重複的日程（同一天同一地點）時：
+```json
+{
+    "detail": "Schedule already exists for this date and location"
+}
+```
+
+2. 當指定的取貨地點不存在時：
+```json
+{
+    "detail": "Location not found"
+}
+```
+
+3. 當指定的日程不存在時：
+```json
+{
+    "detail": "Schedule not found"
+}
+```
+
 ## 注意事項
 1. 所有刪除操作都是軟刪除，資料會被標記為已刪除但不會從資料庫中實際移除
 2. 商品刪除時，相關的訂單明細會被標記為 `product_deleted = true`
