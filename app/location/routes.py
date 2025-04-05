@@ -152,3 +152,21 @@ def delete_schedule(
     db.delete(db_schedule)
     db.commit()
     return {"message": "Schedule deleted successfully"}
+
+@router.get("/schedules/location/{location_id}", response_model=List[schemas.Schedule])
+def get_schedules_by_location(
+    location_id: int,
+    db: Session = Depends(get_db)
+):
+    # Check if location exists
+    location = db.query(models.PickupLocation).filter(models.PickupLocation.location_id == location_id).first()
+    if location is None:
+        raise HTTPException(status_code=404, detail="Location not found")
+    
+    # Get schedules for the location from today onwards
+    today = date.today()
+    schedules = db.query(models.Schedule).filter(
+        models.Schedule.location_id == location_id,
+        models.Schedule.date >= today
+    ).all()
+    return schedules
