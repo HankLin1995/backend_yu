@@ -66,12 +66,28 @@
 | 欄位名稱 | 資料型態 | 說明 | 備註 |
 |---------|----------|------|------|
 | order_id | int | 訂單編號 | 主鍵 |
-| line_id | int | LINE ID | 外鍵參考 customers.line_id |
-| product_id | int | 商品編號 | 外鍵參考 products.product_id |
+| line_id | varchar | LINE ID | 外鍵參考 customers.line_id |
+| schedule_id | int | 取貨時段編號 | 外鍵參考 schedules.schedule_id |
 | order_date | datetime | 訂單日期 | |
-| order_station | varchar | 訂單狀態 | |
-| order_status | varchar | 訂單狀態 | |
+| order_status | varchar | 訂單狀態 | * |   
+| payment_method | varchar | 付款方式 | |
+| payment_status | varchar | 付款狀態 | * |
 | total_amount | decimal | 訂單總金額 | |
+| create_time | datetime | 建立時間 | |
+| update_time | datetime | 更新時間 | |
+
+* order_status 說明：
+  - pending: 訂單未付款
+  - paid: 訂單已付款
+  - preparing: 訂單備貨中
+  - ready_for_pickup: 訂單已備貨
+  - completed: 訂單已完成
+  - cancelled: 訂單已取消
+
+* payment_status 說明：
+  - pending: 付款未完成
+  - paid: 付款完成
+  - refunded: 退款完成
 
 ### 7. order_details (訂單明細)
 | 欄位名稱 | 資料型態 | 說明 | 備註 |
@@ -82,6 +98,7 @@
 | quantity | int | 數量 | |
 | unit_price | decimal | 單價 | |
 | subtotal | decimal | 小計 | |
+| discount_id | int | 折扣編號 | 外鍵參考 product_discounts.discount_id，可為空 |
 
 ### 8. pickup_locations (取貨地點)
 | 欄位名稱 | 資料型態 | 說明 | 備註 |
