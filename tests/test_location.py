@@ -222,6 +222,6 @@ def test_get_schedules_by_location(client: TestClient, db_session: Session):
         assert schedule["location_id"] == location_id
 
     # 測試不存在的地點
-    response = client.get("/schedules/99999")
+    response = client.get("/schedules/location/99999")
     assert response.status_code == 404
     assert "Location not found" in response.json()["detail"]
