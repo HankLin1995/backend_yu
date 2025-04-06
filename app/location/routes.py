@@ -30,7 +30,7 @@ def get_pickup_locations(
     locations = db.query(models.PickupLocation).offset(skip).limit(limit).all()
     return locations
 
-@router.get("/locations/{location_id}", response_model=schemas.PickupLocation,tag=["Location"])
+@router.get("/locations/{location_id}", response_model=schemas.PickupLocation,tags=["Location"])
 def get_pickup_location(
     location_id: int,
     db: Session = Depends(get_db)
@@ -40,7 +40,7 @@ def get_pickup_location(
         raise HTTPException(status_code=404, detail="Location not found")
     return location
 
-@router.put("/locations/{location_id}", response_model=schemas.PickupLocation,tag=["Location"])
+@router.put("/locations/{location_id}", response_model=schemas.PickupLocation,tags=["Location"])
 def update_pickup_location(
     location_id: int,
     location: schemas.PickupLocationUpdate,
