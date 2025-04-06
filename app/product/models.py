@@ -35,7 +35,7 @@ class Product(Base):
     
     categories = relationship("Category", secondary="products_categories", back_populates="products")
     photos = relationship("ProductPhoto", back_populates="product")
-    # orders = relationship("OrderDetail", back_populates="product")
+    order_details = relationship("OrderDetail", back_populates="product")
     discounts = relationship("ProductDiscount", back_populates="product")
 
 class Category(Base):
@@ -54,4 +54,6 @@ class ProductDiscount(Base):
     quantity = Column(Integer)
     price = Column(Integer)  # Changed from Float to Integer
     
+    # Relationships
     product = relationship("Product", back_populates="discounts")
+    order_details = relationship("OrderDetail", back_populates="discount")

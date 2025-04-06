@@ -1,5 +1,6 @@
 from datetime import datetime, date, time
 from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, Date, Time, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
 from app.db import Base
 
 class PickupLocation(Base):
@@ -13,6 +14,9 @@ class PickupLocation(Base):
     coordinate_y = Column(DECIMAL(10, 6), nullable=True)
     photo_path = Column(String(255), nullable=True)
     create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    schedules = relationship("Schedule", back_populates="location")
 
 class Schedule(Base):
     __tablename__ = "schedules"
@@ -28,3 +32,7 @@ class Schedule(Base):
     __table_args__ = (
         UniqueConstraint('date', 'location_id', name='uix_date_location'),
     )
+
+    # Relationships
+    location = relationship("PickupLocation", back_populates="schedules")
+    orders = relationship("Order", back_populates="schedule")

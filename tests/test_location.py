@@ -165,6 +165,11 @@ def test_update_schedule(client: TestClient):
     assert data["pickup_end_time"] == "18:00:00"
 
 def test_get_schedules_by_location(client: TestClient, db_session: Session):
+    from datetime import date, timedelta
+    TODAY_STR = date.today().strftime("%Y-%m-%d")
+    YESTERDAY_STR = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+    TOMORROW_STR = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+
     # 清理現有的排程數據
     db_session.query(models.Schedule).delete()
     db_session.commit()
@@ -181,7 +186,7 @@ def test_get_schedules_by_location(client: TestClient, db_session: Session):
 
     # 創建一個過去的排程（昨天）
     past_schedule = {
-        "date": "2025-04-04",  # 假設今天是2025-04-05
+        "date": YESTERDAY_STR,
         "location_id": location_id,
         "pickup_start_time": "17:00:00",
         "pickup_end_time": "17:30:00",
@@ -191,7 +196,7 @@ def test_get_schedules_by_location(client: TestClient, db_session: Session):
 
     # 創建一個今天的排程
     today_schedule = {
-        "date": "2025-04-05",
+        "date": TODAY_STR,
         "location_id": location_id,
         "pickup_start_time": "17:00:00",
         "pickup_end_time": "17:30:00",
@@ -201,7 +206,7 @@ def test_get_schedules_by_location(client: TestClient, db_session: Session):
 
     # 創建一個未來的排程
     future_schedule = {
-        "date": "2025-04-06",
+        "date": TOMORROW_STR,
         "location_id": location_id,
         "pickup_start_time": "17:00:00",
         "pickup_end_time": "17:30:00",
@@ -218,7 +223,7 @@ def test_get_schedules_by_location(client: TestClient, db_session: Session):
     
     # 確認所有返回的排程日期都是今天或之後
     for schedule in data:
-        assert schedule["date"] >= "2025-04-05"  # 今天的日期
+        assert schedule["date"] >= TODAY_STR
         assert schedule["location_id"] == location_id
 
     # 測試不存在的地點

@@ -5,6 +5,7 @@ from app.photo.routes import router as photo_router
 from app.customer.routes import router as customer_router
 from app.location.routes import router as location_router
 from app.db import create_tables
+from app.order.routes import router as order_router
 from fastapi.staticfiles import StaticFiles
 
 # Create FastAPI application
@@ -31,6 +32,7 @@ app.include_router(product_router)
 app.include_router(photo_router)
 app.include_router(customer_router)
 app.include_router(location_router)
+app.include_router(order_router)
 
 # Create database tables
 create_tables()

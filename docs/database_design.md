@@ -62,7 +62,7 @@
 | description | varchar | 照片描述 | |
 | created_date | datetime | 建立日期 | |
 
-### 6. orders (訂單主表)
+### 6. orders (訂單總表)
 | 欄位名稱 | 資料型態 | 說明 | 備註 |
 |---------|----------|------|------|
 | order_id | int | 訂單編號 | 主鍵 |
@@ -70,8 +70,8 @@
 | schedule_id | int | 取貨時段編號 | 外鍵參考 schedules.schedule_id |
 | order_date | datetime | 訂單日期 | |
 | order_status | varchar | 訂單狀態 | * |   
-| payment_method | varchar | 付款方式 | |
-| payment_status | varchar | 付款狀態 | * |
+| payment_method | varchar | 付款方式(預留後續使用，可選) | |
+| payment_status | varchar | 付款狀態(預留後續使用，可選) | * |
 | total_amount | decimal | 訂單總金額 | |
 | create_time | datetime | 建立時間 | |
 | update_time | datetime | 更新時間 | |
