@@ -26,9 +26,9 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="function")
 def db_session():
+    """Create a new database session for each test."""
     # Create all tables
     Base.metadata.create_all(bind=engine)
-    
     # Create a new session for the test
     session = TestingSessionLocal()
     try:
