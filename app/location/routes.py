@@ -10,7 +10,7 @@ from . import models, schemas
 router = APIRouter()
 
 # 取貨地點相關端點
-@router.post("/locations/", response_model=schemas.PickupLocation)
+@router.post("/locations/", response_model=schemas.PickupLocation, tags=["Location"])
 def create_pickup_location(
     location: schemas.PickupLocationCreate,
     db: Session = Depends(get_db)
@@ -21,7 +21,7 @@ def create_pickup_location(
     db.refresh(db_location)
     return db_location
 
-@router.get("/locations/", response_model=List[schemas.PickupLocation])
+@router.get("/locations/", response_model=List[schemas.PickupLocation], tags=["Location"])
 def get_pickup_locations(
     skip: int = 0,
     limit: int = 100,
@@ -30,7 +30,7 @@ def get_pickup_locations(
     locations = db.query(models.PickupLocation).offset(skip).limit(limit).all()
     return locations
 
-@router.get("/locations/{location_id}", response_model=schemas.PickupLocation)
+@router.get("/locations/{location_id}", response_model=schemas.PickupLocation,tag=["Location"])
 def get_pickup_location(
     location_id: int,
     db: Session = Depends(get_db)
@@ -40,7 +40,7 @@ def get_pickup_location(
         raise HTTPException(status_code=404, detail="Location not found")
     return location
 
-@router.put("/locations/{location_id}", response_model=schemas.PickupLocation)
+@router.put("/locations/{location_id}", response_model=schemas.PickupLocation,tag=["Location"])
 def update_pickup_location(
     location_id: int,
     location: schemas.PickupLocationUpdate,
@@ -57,7 +57,7 @@ def update_pickup_location(
     db.refresh(db_location)
     return db_location
 
-@router.delete("/locations/{location_id}")
+@router.delete("/locations/{location_id}", tags=["Location"])
 def delete_pickup_location(
     location_id: int,
     db: Session = Depends(get_db)
@@ -71,7 +71,7 @@ def delete_pickup_location(
     return {"message": "Location deleted successfully"}
 
 # 日程表相關端點
-@router.post("/schedules/", response_model=schemas.Schedule)
+@router.post("/schedules/", response_model=schemas.Schedule, tags=["Schedule"])
 def create_schedule(
     schedule: schemas.ScheduleCreate,
     db: Session = Depends(get_db)
@@ -91,7 +91,7 @@ def create_schedule(
         db.rollback()
         raise HTTPException(status_code=400, detail="Schedule already exists for this date and location")
 
-@router.get("/schedules/", response_model=List[schemas.Schedule])
+@router.get("/schedules/", response_model=List[schemas.Schedule], tags=["Schedule"])
 def get_schedules(
     skip: int = 0,
     limit: int = 100,
@@ -104,7 +104,7 @@ def get_schedules(
     schedules = query.offset(skip).limit(limit).all()
     return schedules
 
-@router.get("/schedules/{schedule_id}", response_model=schemas.Schedule)
+@router.get("/schedules/{schedule_id}", response_model=schemas.Schedule, tags=["Schedule"])
 def get_schedule(
     schedule_id: int,
     db: Session = Depends(get_db)
@@ -114,7 +114,7 @@ def get_schedule(
         raise HTTPException(status_code=404, detail="Schedule not found")
     return schedule
 
-@router.put("/schedules/{schedule_id}", response_model=schemas.Schedule)
+@router.put("/schedules/{schedule_id}", response_model=schemas.Schedule, tags=["Schedule"])
 def update_schedule(
     schedule_id: int,
     schedule: schemas.ScheduleUpdate,
@@ -140,7 +140,7 @@ def update_schedule(
         db.rollback()
         raise HTTPException(status_code=400, detail="Schedule already exists for this date and location")
 
-@router.delete("/schedules/{schedule_id}")
+@router.delete("/schedules/{schedule_id}", tags=["Schedule"])
 def delete_schedule(
     schedule_id: int,
     db: Session = Depends(get_db)
@@ -153,7 +153,7 @@ def delete_schedule(
     db.commit()
     return {"message": "Schedule deleted successfully"}
 
-@router.get("/schedules/location/{location_id}", response_model=List[schemas.Schedule])
+@router.get("/schedules/location/{location_id}", response_model=List[schemas.Schedule], tags=["Schedule"])
 def get_schedules_by_location(
     location_id: int,
     db: Session = Depends(get_db)
