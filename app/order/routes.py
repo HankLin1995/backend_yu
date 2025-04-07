@@ -103,10 +103,7 @@ def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUp
 
 @router.delete("/{order_id}")
 def delete_order(order_id: int, db: Session = Depends(get_db)):
-    order = db.query(models.Order).filter(
-        models.Order.order_id == order_id
-        # models.Order.is_deleted == 0
-    ).first()
+    order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
     
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -117,15 +114,14 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
             detail="Cannot delete completed orders"
         )
     
-    # # Implement soft delete
-    # order.is_deleted = 1
-    # order.update_time = datetime.utcnow()
+    # If order is in processing state, restore stock
+    if order.order_status == "processing":
+        for detail in order.order_details:
+            product = detail.product
+            product.stock += detail.quantity
     
-    # # If order is in processing state, restore stock
-    # if order.order_status == "processing":
-    #     for detail in order.order_details:
-    #         product = detail.product
-    #         product.stock += detail.quantity
-    
+    # Delete the order (cascade will handle order_details)
+    db.delete(order)
     db.commit()
+    
     return {"message": "Order soft deleted successfully"}

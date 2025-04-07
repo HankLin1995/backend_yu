@@ -241,3 +241,55 @@ def test_order_not_found(client):
     payment_update = {"payment_status": "paid"}
     response = client.patch("/orders/99999/payment", json=payment_update)
     assert response.status_code == 404
+
+    # Test deleting non-existent order
+    response = client.delete("/orders/99999")
+    assert response.status_code == 404
+
+
+def test_delete_order(client, db_session, test_customer, test_schedule):
+    # Create test order with pending status
+    order = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash",
+        order_status="pending"
+    )
+    db_session.add(order)
+    db_session.commit()
+    
+    order_id = order.order_id  # Store the ID before deletion
+
+    # Test successful deletion of pending order
+    response = client.delete(f"/orders/{order_id}")
+    assert response.status_code == 200
+    assert response.json()["message"] == "Order soft deleted successfully"
+
+    # Clear the session and verify order is deleted from database
+    db_session.expire_all()
+    deleted_order = db_session.query(Order).filter(Order.order_id == order_id).first()
+    assert deleted_order is None
+
+
+def test_delete_completed_order(client, db_session, test_customer, test_schedule):
+    # Create test order with completed status
+    order = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash",
+        order_status="completed"
+    )
+    db_session.add(order)
+    db_session.commit()
+
+    # Test cannot delete completed order
+    response = client.delete(f"/orders/{order.order_id}")
+    assert response.status_code == 400
+    assert "Cannot delete completed orders" in response.json()["detail"]
+
+    # Verify order still exists in database
+    existing_order = db_session.query(Order).filter(Order.order_id == order.order_id).first()
+    assert existing_order is not None
+    assert existing_order.order_status == "completed"
