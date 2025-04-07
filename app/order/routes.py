@@ -100,3 +100,32 @@ def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUp
     db.commit()
     db.refresh(order)
     return order
+
+@router.delete("/{order_id}")
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(
+        models.Order.order_id == order_id
+        # models.Order.is_deleted == 0
+    ).first()
+    
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.order_status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete completed orders"
+        )
+    
+    # # Implement soft delete
+    # order.is_deleted = 1
+    # order.update_time = datetime.utcnow()
+    
+    # # If order is in processing state, restore stock
+    # if order.order_status == "processing":
+    #     for detail in order.order_details:
+    #         product = detail.product
+    #         product.stock += detail.quantity
+    
+    db.commit()
+    return {"message": "Order soft deleted successfully"}
