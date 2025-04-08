@@ -43,7 +43,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             discount_id=detail.discount_id
         )
         db.add(db_detail)
-        total_amount += subtotal
+        total_amount += detail.subtotal
 
     # Update order total
     db_order.total_amount = total_amount
