@@ -36,8 +36,10 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             order_id=db_order.order_id,
             product_id=detail.product_id,
             quantity=detail.quantity,
-            unit_price=product.price,
-            subtotal=subtotal,
+            # unit_price=product.price,
+            # subtotal=subtotal,
+            unit_price=detail.unit_price,  # 使用前端单价
+            subtotal=detail.subtotal,      # 使用前端小计
             discount_id=detail.discount_id
         )
         db.add(db_detail)
