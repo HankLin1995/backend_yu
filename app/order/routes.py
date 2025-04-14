@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.order import models, schemas
 from app.product.models import Product
+from app.photo.models import ProductPhoto
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -49,12 +50,41 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db_order.total_amount = total_amount
     db.commit()
     db.refresh(db_order)
+    
+    # 增強訂單詳細資訊
+    for detail in db_order.order_details:
+        product = detail.product
+        # 設置產品基本資訊
+        detail.product_name = product.product_name
+        detail.product_description = product.description
+        
+        # 獲取產品照片
+        photo = db.query(ProductPhoto)\
+            .filter(ProductPhoto.product_id == product.product_id)\
+            .first()
+        detail.product_photo_path = photo.file_path if photo else None
+    
     return db_order
 
 
 @router.get("/", response_model=List[schemas.Order])
 def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     orders = db.query(models.Order).offset(skip).limit(limit).all()
+    
+    # 增強訂單詳細資訊
+    for order in orders:
+        for detail in order.order_details:
+            product = detail.product
+            # 設置產品基本資訊
+            detail.product_name = product.product_name
+            detail.product_description = product.description
+            
+            # 獲取產品照片
+            photo = db.query(ProductPhoto)\
+                .filter(ProductPhoto.product_id == product.product_id)\
+                .first()
+            detail.product_photo_path = photo.file_path if photo else None
+    
     return orders
 
 
@@ -63,12 +93,44 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 增強訂單詳細資訊
+    for detail in order.order_details:
+        product = detail.product
+        # 設置產品基本資訊
+        detail.product_name = product.product_name
+        detail.product_description = product.description
+        
+        # 獲取產品照片
+        photo = db.query(ProductPhoto)\
+            .filter(ProductPhoto.product_id == product.product_id)\
+            .first()
+        detail.product_photo_path = photo.file_path if photo else None
+    
     return order
 
 
 @router.get("/customer/{line_id}", response_model=List[schemas.Order])
 def get_customer_orders(line_id: str, db: Session = Depends(get_db)):
-    orders = db.query(models.Order).filter(models.Order.line_id == line_id).all()
+    # 使用 joinedload 預加載關聯數據
+    orders = db.query(models.Order)\
+        .filter(models.Order.line_id == line_id)\
+        .all()
+    
+    # 增強訂單詳細資訊
+    for order in orders:
+        for detail in order.order_details:
+            product = detail.product
+            # 設置產品基本資訊
+            detail.product_name = product.product_name
+            detail.product_description = product.description
+            
+            # 獲取產品照片
+            photo = db.query(ProductPhoto)\
+                .filter(ProductPhoto.product_id == product.product_id)\
+                .first()
+            detail.product_photo_path = photo.file_path if photo else None
+    
     return orders
 
 

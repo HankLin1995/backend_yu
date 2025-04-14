@@ -18,6 +18,10 @@ class OrderDetailCreate(OrderDetailBase):
 class OrderDetail(OrderDetailBase):
     order_detail_id: int
     order_id: int
+    # Product details
+    product_name: str
+    product_description: Optional[str] = None
+    product_photo_path: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
