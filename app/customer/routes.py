@@ -50,12 +50,12 @@ def update_customer(line_id: str, customer: schemas.CustomerUpdate, db: Session 
     return db_customer
 
 
-@router.delete("/{line_id}")
-def delete_customer(line_id: str, db: Session = Depends(get_db)):
-    db_customer = db.query(models.Customer).filter(models.Customer.line_id == line_id).first()
-    if not db_customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
+# @router.delete("/{line_id}")
+# def delete_customer(line_id: str, db: Session = Depends(get_db)):
+#     db_customer = db.query(models.Customer).filter(models.Customer.line_id == line_id).first()
+#     if not db_customer:
+#         raise HTTPException(status_code=404, detail="Customer not found")
     
-    db.delete(db_customer)
-    db.commit()
-    return {"message": "Customer deleted successfully"}
+#     db.delete(db_customer)
+#     db.commit()
+#     return {"message": "Customer deleted successfully"}

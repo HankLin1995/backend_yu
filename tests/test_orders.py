@@ -8,7 +8,7 @@ from app.location.models import Schedule, PickupLocation
 @pytest.fixture
 def test_customer(db_session):
     customer = Customer(
-        line_id="test_line_id",
+        line_id="admin_test_id",  # 使用與認證相同的 ID
         name="Test Customer",
         line_name="Test Line Name",
         line_pic_url="http://example.com/pic.jpg",

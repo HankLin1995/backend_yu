@@ -6,12 +6,14 @@ from app.db import get_db
 from app.order import models, schemas
 from app.product.models import Product
 from app.photo.models import ProductPhoto
+from app.customer.models import Customer
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 @router.post("/", response_model=schemas.Order)
-def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # Create new order
     total_amount = 0
     db_order = models.Order(
@@ -58,7 +60,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[schemas.Order])
-def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_orders(skip: int = 0, limit: int = 100, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     orders = db.query(models.Order).offset(skip).limit(limit).all()
     
     # 產品資訊已通過 SQLAlchemy 關聯自動載入
@@ -68,10 +70,15 @@ def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 
 @router.get("/{order_id}", response_model=schemas.Order)
-def get_order(order_id: int, db: Session = Depends(get_db)):
+def get_order(order_id: int, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # 先檢查訂單是否存在
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 如果存在，再檢查授權
+    if current_user.line_id != order.line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this order")
     
     # 增強訂單詳細資訊
     for detail in order.order_details:
@@ -90,7 +97,15 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/customer/{line_id}", response_model=List[schemas.Order])
-def get_customer_orders(line_id: str, db: Session = Depends(get_db)):
+def get_customer_orders(line_id: str, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # 先檢查客戶是否存在
+    customer = db.query(Customer).filter(Customer.line_id == line_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # 如果存在，再檢查授權
+    if current_user.line_id != line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     # 使用 joinedload 預加載關聯數據
     orders = db.query(models.Order)\
         .filter(models.Order.line_id == line_id)\
@@ -103,10 +118,15 @@ def get_customer_orders(line_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{order_id}/status", response_model=schemas.Order)
-def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # 先檢查訂單是否存在
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 如果存在，再檢查授權
+    if current_user.line_id != order.line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this order")
 
     valid_statuses = ["pending", "paid", "preparing", "ready_for_pickup", "completed", "cancelled"]
     if status_update.order_status not in valid_statuses:
@@ -119,10 +139,15 @@ def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate,
 
 
 @router.patch("/{order_id}/payment", response_model=schemas.Order)
-def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUpdate, db: Session = Depends(get_db)):
+def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUpdate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # 先檢查訂單是否存在
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 如果存在，再檢查授權
+    if current_user.line_id != order.line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this order")
 
     valid_statuses = ["pending", "paid", "refunded"]
     if payment_update.payment_status not in valid_statuses:
@@ -134,11 +159,15 @@ def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUp
     return order
 
 @router.delete("/{order_id}")
-def delete_order(order_id: int, db: Session = Depends(get_db)):
+def delete_order(order_id: int, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # 先檢查訂單是否存在
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
-    
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 如果存在，再檢查授權
+    if current_user.line_id != order.line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this order")
     
     if order.order_status == "completed":
         raise HTTPException(
