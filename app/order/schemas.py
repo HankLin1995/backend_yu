@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.product.schemas import Product
+
 
 class OrderDetailBase(BaseModel):
     product_id: int
@@ -18,10 +20,8 @@ class OrderDetailCreate(OrderDetailBase):
 class OrderDetail(OrderDetailBase):
     order_detail_id: int
     order_id: int
-    # Product details
-    product_name: str
-    product_description: Optional[str] = None
-    product_photo_path: Optional[str] = None
+    # 完整的產品對象
+    product: Optional[Product] = None
 
     model_config = ConfigDict(from_attributes=True)
 

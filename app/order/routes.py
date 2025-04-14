@@ -32,15 +32,12 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail=f"Product {detail.product_id} not found")
 
         # Create order detail
-        subtotal = product.price * detail.quantity
         db_detail = models.OrderDetail(
             order_id=db_order.order_id,
             product_id=detail.product_id,
             quantity=detail.quantity,
-            # unit_price=product.price,
-            # subtotal=subtotal,
-            unit_price=detail.unit_price,  # 使用前端单价
-            subtotal=detail.subtotal,      # 使用前端小计
+            unit_price=detail.unit_price,  # 使用前端傳來的單價
+            subtotal=detail.subtotal,      # 使用前端傳來的小計
             discount_id=detail.discount_id
         )
         db.add(db_detail)
@@ -53,16 +50,9 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     
     # 增強訂單詳細資訊
     for detail in db_order.order_details:
-        product = detail.product
-        # 設置產品基本資訊
-        detail.product_name = product.product_name
-        detail.product_description = product.description
-        
-        # 獲取產品照片
-        photo = db.query(ProductPhoto)\
-            .filter(ProductPhoto.product_id == product.product_id)\
-            .first()
-        detail.product_photo_path = photo.file_path if photo else None
+        # 直接使用產品對象
+        # SQLAlchemy 關聯已經自動載入了產品資訊
+        pass
     
     return db_order
 
@@ -71,19 +61,8 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
 def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     orders = db.query(models.Order).offset(skip).limit(limit).all()
     
-    # 增強訂單詳細資訊
-    for order in orders:
-        for detail in order.order_details:
-            product = detail.product
-            # 設置產品基本資訊
-            detail.product_name = product.product_name
-            detail.product_description = product.description
-            
-            # 獲取產品照片
-            photo = db.query(ProductPhoto)\
-                .filter(ProductPhoto.product_id == product.product_id)\
-                .first()
-            detail.product_photo_path = photo.file_path if photo else None
+    # 產品資訊已通過 SQLAlchemy 關聯自動載入
+    # 不需要額外處理
     
     return orders
 
@@ -117,19 +96,8 @@ def get_customer_orders(line_id: str, db: Session = Depends(get_db)):
         .filter(models.Order.line_id == line_id)\
         .all()
     
-    # 增強訂單詳細資訊
-    for order in orders:
-        for detail in order.order_details:
-            product = detail.product
-            # 設置產品基本資訊
-            detail.product_name = product.product_name
-            detail.product_description = product.description
-            
-            # 獲取產品照片
-            photo = db.query(ProductPhoto)\
-                .filter(ProductPhoto.product_id == product.product_id)\
-                .first()
-            detail.product_photo_path = photo.file_path if photo else None
+    # 產品資訊已通過 SQLAlchemy 關聯自動載入
+    # 不需要額外處理
     
     return orders
 
