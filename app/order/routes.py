@@ -32,6 +32,23 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
         if not product:
             db.rollback()
             raise HTTPException(status_code=404, detail=f"Product {detail.product_id} not found")
+        
+        # 計算實際需要的庫存數量
+        actual_quantity = detail.quantity
+        if product.one_set_quantity and product.one_set_quantity > 0:
+            # 如果有設定一組數量，需要將訂購數量轉換為實際庫存數量
+            actual_quantity = detail.quantity * product.one_set_quantity
+
+        # Check if there's enough stock
+        if product.stock_quantity < actual_quantity:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for product {product.product_id}. Available: {product.stock_quantity}, Requested: {actual_quantity} (Order quantity: {detail.quantity})"
+            )
+        
+        # Reduce stock
+        product.stock_quantity -= actual_quantity
 
         # Create order detail
         db_detail = models.OrderDetail(
@@ -47,14 +64,13 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
 
     # Update order total
     db_order.total_amount = total_amount
-    db.commit()
-    db.refresh(db_order)
     
-    # 增強訂單詳細資訊
-    for detail in db_order.order_details:
-        # 直接使用產品對象
-        # SQLAlchemy 關聯已經自動載入了產品資訊
-        pass
+    try:
+        db.commit()
+        db.refresh(db_order)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create order")
     
     return db_order
 

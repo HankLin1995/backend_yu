@@ -69,6 +69,9 @@ def test_create_order(client, db_session, test_customer, test_product, test_sche
     product_id = product.product_id
     product_price = float(product.price)
     
+    # 儲存原始庫存數量以供驗證
+    original_stock = product.stock_quantity
+    
     order_data = {
         "line_id": line_id,
         "schedule_id": schedule_id,
@@ -76,7 +79,7 @@ def test_create_order(client, db_session, test_customer, test_product, test_sche
         "order_details": [
             {
                 "product_id": product_id,
-                "quantity": 2,
+                "quantity": 2,  # 訂購 2 組
                 "unit_price": product_price,
                 "subtotal": product_price * 2
             }
@@ -87,13 +90,79 @@ def test_create_order(client, db_session, test_customer, test_product, test_sche
     assert response.status_code == 200
     data = response.json()
     
-    # 直接與請求數據比較，而不是與對象比較
+    # 驗證訂單基本資訊
     assert data["line_id"] == line_id
     assert data["schedule_id"] == schedule_id
     assert data["order_status"] == "pending"
     assert data["payment_status"] == "pending"
     assert len(data["order_details"]) == 1
     assert data["order_details"][0]["quantity"] == 2
+    
+    # 驗證庫存是否正確減少
+    updated_product = db_session.query(Product).filter(Product.product_id == product_id).first()
+    expected_stock = original_stock - (2 * product.one_set_quantity)  # 2組 * 每組數量
+    assert updated_product.stock_quantity == expected_stock
+
+def test_create_order_insufficient_stock(client, db_session, test_customer, test_product, test_schedule):
+    # 設置產品庫存為較小的數量
+    product = db_session.query(Product).filter(Product.product_id == test_product.product_id).first()
+    product.stock_quantity = 3  # 設置庫存只有3個
+    db_session.commit()
+    
+    order_data = {
+        "line_id": test_customer.line_id,
+        "schedule_id": test_schedule.schedule_id,
+        "payment_method": "cash",
+        "order_details": [
+            {
+                "product_id": product.product_id,
+                "quantity": 1,  # 訂購1組，但因為一組需要5個（one_set_quantity），所以會超過庫存
+                "unit_price": float(product.price),
+                "subtotal": float(product.price)
+            }
+        ]
+    }
+
+    response = client.post("/orders/", json=order_data)
+    assert response.status_code == 400
+    assert "Insufficient stock" in response.json()["detail"]
+    
+    # 驗證庫存沒有變化
+    updated_product = db_session.query(Product).filter(Product.product_id == product.product_id).first()
+    assert updated_product.stock_quantity == 3
+
+def test_create_order_multiple_items(client, db_session, test_customer, test_product, test_schedule):
+    product = db_session.query(Product).filter(Product.product_id == test_product.product_id).first()
+    original_stock = product.stock_quantity
+    
+    # 創建一個包含多個商品的訂單
+    order_data = {
+        "line_id": test_customer.line_id,
+        "schedule_id": test_schedule.schedule_id,
+        "payment_method": "cash",
+        "order_details": [
+            {
+                "product_id": product.product_id,
+                "quantity": 2,  # 訂購2組
+                "unit_price": float(product.price),
+                "subtotal": float(product.price) * 2
+            },
+            {
+                "product_id": product.product_id,
+                "quantity": 1,  # 再訂購1組
+                "unit_price": float(product.price),
+                "subtotal": float(product.price)
+            }
+        ]
+    }
+
+    response = client.post("/orders/", json=order_data)
+    assert response.status_code == 200
+    
+    # 驗證庫存是否正確減少（總共訂購3組）
+    updated_product = db_session.query(Product).filter(Product.product_id == product.product_id).first()
+    expected_stock = original_stock - (3 * product.one_set_quantity)
+    assert updated_product.stock_quantity == expected_stock
 
 def test_get_orders(client, db_session, test_customer, test_product, test_schedule):
     # Create test order
