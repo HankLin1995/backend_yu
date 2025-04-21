@@ -8,6 +8,7 @@ from app.product.models import Product
 from app.photo.models import ProductPhoto
 from app.customer.models import Customer
 from app.auth.dependencies import get_current_user
+from app.location.models import PickupLocation, Schedule
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -202,3 +203,54 @@ def delete_order(order_id: int, current_user: Customer = Depends(get_current_use
     db.commit()
     
     return {"message": "Order soft deleted successfully"}
+
+STATUS_MAPPING = {
+    "pending": "待處理",
+    "paid": "已付款",
+    "preparing": "準備中",
+    "ready_for_pickup": "可取貨",
+    "completed": "已完成",
+    "cancelled": "已取消"
+}
+
+@router.get("/list/all")
+def get_orders_list(current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Get all orders
+    orders = db.query(models.Order).all()
+    
+    # Create a list to store all order data
+    all_order_data = []
+    
+    # Process all orders
+    for order in orders:
+        # Get related data
+        customer = db.query(Customer).filter(Customer.line_id == order.line_id).first()
+        schedule = db.query(Schedule).filter(Schedule.schedule_id == order.schedule_id).first()
+        location = db.query(PickupLocation).filter(PickupLocation.location_id == schedule.location_id).first() if schedule else None
+        
+        # Process each order detail
+        for order_detail in order.order_details:
+            product = db.query(Product).filter(Product.product_id == order_detail.product_id).first()
+            
+            # Format unit display
+            if product and product.one_set_quantity > 1:
+                unit_display = f"組(每組{product.one_set_quantity}{product.unit})"
+                remark = ""
+            else:
+                unit_display = product.unit if product else ""
+                remark = ""
+            
+            # Add this order detail to our list
+            all_order_data.append({
+                '訂單編號': order.order_id,
+                '訂購人': customer.name if customer else '',
+                '日期': schedule.date if schedule else '',
+                '地點': location.name if location else '',
+                '商品名稱': product.product_name if product else '',
+                '數量': order_detail.quantity,
+                '單位': unit_display,
+                '備註': remark,
+                '訂單狀態': STATUS_MAPPING.get(order.order_status, '')
+            })
+    
+    return all_order_data
