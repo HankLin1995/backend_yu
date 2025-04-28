@@ -12,6 +12,92 @@ from app.auth.dependencies import get_current_user
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
+@router.post("/{order_id}/details", response_model=schemas.Order)
+def add_order_detail(order_id: int, detail: schemas.OrderDetailCreate,  db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    product = db.query(Product).filter(Product.product_id == detail.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    actual_quantity = detail.quantity
+    if hasattr(product, 'one_set_quantity') and product.one_set_quantity and product.one_set_quantity > 0:
+        actual_quantity = detail.quantity * product.one_set_quantity
+    if product.stock_quantity < actual_quantity:
+        raise HTTPException(status_code=400, detail=f"Insufficient stock for product {product.product_id}")
+    product.stock_quantity -= actual_quantity
+    db_detail = models.OrderDetail(
+        order_id=order_id,
+        product_id=detail.product_id,
+        quantity=detail.quantity,
+        unit_price=detail.unit_price,
+        subtotal=detail.subtotal,
+        discount_id=detail.discount_id
+    )
+    db.add(db_detail)
+    # Recalculate total
+    db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id)) + detail.subtotal
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+
+@router.put("/{order_id}/details/{detail_id}", response_model=schemas.Order)
+def update_order_detail(order_id: int, detail_id: int, detail: schemas.OrderDetailUpdate,  db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    db_detail = db.query(models.OrderDetail).filter(models.OrderDetail.order_detail_id == detail_id, models.OrderDetail.order_id == order_id).first()
+    if not db_detail:
+        raise HTTPException(status_code=404, detail="Order detail not found")
+    product = db.query(Product).filter(Product.product_id == detail.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    # 處理庫存差異
+    old_actual = db_detail.quantity
+    new_actual = detail.quantity
+    if hasattr(product, 'one_set_quantity') and product.one_set_quantity and product.one_set_quantity > 0:
+        old_actual = db_detail.quantity * product.one_set_quantity
+        new_actual = detail.quantity * product.one_set_quantity
+    diff = new_actual - old_actual
+    if diff > 0 and product.stock_quantity < diff:
+        raise HTTPException(status_code=400, detail=f"Insufficient stock for product {product.product_id}")
+    product.stock_quantity -= diff
+    db_detail.product_id = detail.product_id
+    db_detail.quantity = detail.quantity
+    db_detail.unit_price = detail.unit_price
+    db_detail.subtotal = detail.subtotal
+    db_detail.discount_id = detail.discount_id
+    # Recalculate total
+    db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id))
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+
+@router.delete("/{order_id}/details/{detail_id}", response_model=schemas.Order)
+def delete_order_detail(order_id: int, detail_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    db_detail = db.query(models.OrderDetail).filter(models.OrderDetail.order_detail_id == detail_id, models.OrderDetail.order_id == order_id).first()
+    if not db_detail:
+        raise HTTPException(status_code=404, detail="Order detail not found")
+    product = db.query(Product).filter(Product.product_id == db_detail.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    actual_quantity = db_detail.quantity
+    if hasattr(product, 'one_set_quantity') and product.one_set_quantity and product.one_set_quantity > 0:
+        actual_quantity = db_detail.quantity * product.one_set_quantity
+    product.stock_quantity += actual_quantity
+    db.delete(db_detail)
+    # Recalculate total
+    db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id))
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+
 @router.post("/", response_model=schemas.Order)
 def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # Create new order

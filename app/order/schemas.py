@@ -16,6 +16,9 @@ class OrderDetailBase(BaseModel):
 class OrderDetailCreate(OrderDetailBase):
     pass
 
+class OrderDetailUpdate(OrderDetailBase):
+    pass
+
 
 class OrderDetail(OrderDetailBase):
     order_detail_id: int
