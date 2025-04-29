@@ -1,4 +1,5 @@
 from typing import List
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -37,7 +38,7 @@ def add_order_detail(order_id: int, detail: schemas.OrderDetailCreate,  db: Sess
     )
     db.add(db_detail)
     # Recalculate total
-    db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id)) + detail.subtotal
+    db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id)) + Decimal(str(detail.subtotal))
     db.commit()
     db.refresh(db_order)
     return db_order
