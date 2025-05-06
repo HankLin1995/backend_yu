@@ -16,6 +16,7 @@ def test_create_product(client):
         "one_set_quantity": 5,
         "stock_quantity": 100,
         "unit": "個",
+        "arrival_date": "2025-06-01",
         "category_ids": [category_id]
     }
     response = client.post("/products/", json=product_data)
@@ -36,7 +37,8 @@ def test_create_duplicate_product(client):
         "one_set_price": 1000,
         "one_set_quantity": 5,
         "stock_quantity": 100,
-        "unit": "個"
+        "unit": "個",
+        "arrival_date": "2025-06-10"
     }
     response = client.post("/products/", json=product_data)
     assert response.status_code == 200
@@ -55,7 +57,8 @@ def test_get_product(client):
         "one_set_price": 1000,
         "one_set_quantity": 5,
         "stock_quantity": 100,
-        "unit": "個"
+        "unit": "個",
+        "arrival_date": "2025-06-15"
     }
     create_response = client.post("/products/", json=product_data)
     assert create_response.status_code == 200
@@ -79,7 +82,8 @@ def test_list_products(client):
             "one_set_price": 1000 + i,
             "one_set_quantity": 5,
             "stock_quantity": 100 + i,
-            "unit": "個"
+            "unit": "個",
+            "arrival_date": f"2025-06-{20 + i}"
         }
         response = client.post("/products/", json=product_data)
         assert response.status_code == 200
@@ -99,7 +103,8 @@ def test_update_product(client):
         "one_set_price": 1000,
         "one_set_quantity": 5,
         "stock_quantity": 100,
-        "unit": "個"
+        "unit": "個",
+        "arrival_date": "2025-06-01"
     }
     create_response = client.post("/products/", json=initial_data)
     assert create_response.status_code == 200
@@ -113,7 +118,8 @@ def test_update_product(client):
         "one_set_price": 2000,
         "one_set_quantity": 5,
         "stock_quantity": 200,
-        "unit": "組"
+        "unit": "組",
+        "arrival_date": "2025-07-15"
     }
     response = client.put(f"/products/{product_id}", json=update_data)
     assert response.status_code == 200

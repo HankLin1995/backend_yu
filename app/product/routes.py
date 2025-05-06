@@ -26,7 +26,8 @@ def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)
         one_set_price=product.one_set_price,
         one_set_quantity=product.one_set_quantity,
         stock_quantity=product.stock_quantity,
-        unit=product.unit
+        unit=product.unit,
+        arrival_date=product.arrival_date
     )
     
     # Add categories if provided

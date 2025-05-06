@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from app.photo.schemas import Photo
 
 class CategoryBase(BaseModel):
@@ -45,6 +45,7 @@ class ProductBase(BaseModel):
     one_set_quantity: Optional[int] = Field(ge=0, description="一組數量")
     stock_quantity: int = Field(ge=0, description="庫存數量")
     unit: Optional[str] = Field(description="單位")
+    arrival_date: Optional[date] = Field(default=None, description="到貨日期")
 
 class ProductCreate(ProductBase):
     category_ids: Optional[List[int]] = Field(default=None, description="類別ID列表")

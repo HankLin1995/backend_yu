@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Table, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Table, Boolean, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..db import Base
@@ -30,6 +30,7 @@ class Product(Base):
     one_set_quantity = Column(Integer, nullable=True)  # 一組數量
     stock_quantity = Column(Integer)  # 庫存
     unit = Column(String, nullable=True)  # 單位
+    arrival_date = Column(Date, nullable=True)  # 到貨日期
     create_time = Column(DateTime, default=datetime.utcnow)
     # is_deleted = Column(Boolean, default=False)
     
