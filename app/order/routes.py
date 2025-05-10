@@ -1,6 +1,6 @@
 from typing import List, Optional
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -169,8 +169,8 @@ def get_orders(
     skip: int = 0, 
     limit: int = 100, 
     line_id: Optional[str] = None,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 
     current_user: Customer = Depends(get_current_user), 
     db: Session = Depends(get_db)
@@ -183,10 +183,14 @@ def get_orders(
         query = query.filter(models.Order.line_id == line_id)
     
     if start_date:
-        query = query.filter(models.Order.order_date >= start_date)
+        # Convert date to datetime at midnight for proper comparison
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        query = query.filter(models.Order.order_date >= start_datetime)
     
     if end_date:
-        query = query.filter(models.Order.order_date <= end_date)
+        # Convert date to datetime at 23:59:59 for end of day
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        query = query.filter(models.Order.order_date <= end_datetime)
     
     # 應用分頁
     orders = query.offset(skip).limit(limit).all()

@@ -253,7 +253,7 @@ def test_get_orders_filter_by_line_id(client, db_session, test_customer, test_pr
     
     # Need to set headers for authentication (using test_customer as authenticated user)
     test_customer_line_id = test_customer.line_id
-    headers = {"Authorization": f"Bearer test_token_for_{test_customer_line_id}"}
+    headers = {"Authorization": f"Bearer {test_customer_line_id}"}
     
     # Test filtering by test_customer's line_id
     response = client.get(f"/orders/?line_id={test_customer_line_id}", headers=headers)
@@ -281,7 +281,7 @@ def test_get_orders_filter_by_line_id(client, db_session, test_customer, test_pr
     assert not order2_found, "Order from different customer should not be included"
     
     # Test filtering by different_customer's line_id (need to use different_customer's auth)
-    headers_different = {"Authorization": f"Bearer test_token_for_{different_line_id}"}
+    headers_different = {"Authorization": f"Bearer {different_line_id}"}
     response = client.get(f"/orders/?line_id={different_line_id}", headers=headers_different)
     assert response.status_code == 200
     data = response.json()
@@ -304,25 +304,30 @@ def test_get_orders_filter_by_line_id(client, db_session, test_customer, test_pr
     assert not order1_found, "Order1 should not be included in the results"
 
 def test_get_orders_filter_by_date(client, db_session, test_customer, test_product, test_schedule):
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, date
+    import json
+    print("\n==== Starting test_get_orders_filter_by_date ====")
     
     # Store test_customer.line_id to avoid session issues
     test_customer_line_id = test_customer.line_id
     
     # Create orders with different dates
-    # Order from yesterday
-    yesterday = datetime.now() - timedelta(days=1)
+    # Create three distinct dates for testing
+    yesterday_date = datetime.now().date() - timedelta(days=1)
+    today_date = datetime.now().date()
+    tomorrow_date = datetime.now().date() + timedelta(days=1)
+    
+    # Create order from yesterday
+    yesterday_dt = datetime.combine(yesterday_date, datetime.min.time())
     order_yesterday = Order(
         line_id=test_customer_line_id,
         schedule_id=test_schedule.schedule_id,
         total_amount=200.00,
         payment_method="cash",
-        order_date=yesterday
+        order_date=yesterday_dt
     )
     db_session.add(order_yesterday)
     db_session.flush()
-    
-    # Store the order ID
     order_yesterday_id = order_yesterday.order_id
     
     order_detail1 = OrderDetail(
@@ -334,19 +339,17 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
     )
     db_session.add(order_detail1)
     
-    # Order from today
-    today = datetime.now()
+    # Create order from today
+    today_dt = datetime.combine(today_date, datetime.min.time())
     order_today = Order(
         line_id=test_customer_line_id,
         schedule_id=test_schedule.schedule_id,
         total_amount=300.00,
         payment_method="cash",
-        order_date=today
+        order_date=today_dt
     )
     db_session.add(order_today)
     db_session.flush()
-    
-    # Store the order ID
     order_today_id = order_today.order_id
     
     order_detail2 = OrderDetail(
@@ -358,19 +361,17 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
     )
     db_session.add(order_detail2)
     
-    # Order from tomorrow
-    tomorrow = datetime.now() + timedelta(days=1)
+    # Create order from tomorrow
+    tomorrow_dt = datetime.combine(tomorrow_date, datetime.min.time())
     order_tomorrow = Order(
         line_id=test_customer_line_id,
         schedule_id=test_schedule.schedule_id,
         total_amount=400.00,
         payment_method="cash",
-        order_date=tomorrow
+        order_date=tomorrow_dt
     )
     db_session.add(order_tomorrow)
     db_session.flush()
-    
-    # Store the order ID
     order_tomorrow_id = order_tomorrow.order_id
     
     order_detail3 = OrderDetail(
@@ -384,12 +385,30 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
     db_session.commit()
     
     # Need to set headers for authentication (using test_customer as authenticated user)
-    headers = {"Authorization": f"Bearer test_token_for_{test_customer_line_id}"}
+    headers = {"Authorization": f"Bearer {test_customer_line_id}"}
+    print(f"\nTest setup details:")
+    print(f"- Yesterday's order ID: {order_yesterday_id}, date: {yesterday_dt}")
+    print(f"- Today's order ID: {order_today_id}, date: {today_dt}")
+    print(f"- Tomorrow's order ID: {order_tomorrow_id}, date: {tomorrow_dt}")
+    print(f"- Authentication headers: {headers}")
     
     # Test filtering by start_date only (today and later)
-    # Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS) which FastAPI expects for datetime
-    start_date = today.isoformat()
+    # Use YYYY-MM-DD format which FastAPI expects for date
+    start_date = today_date.strftime("%Y-%m-%d")
+    print(f"\nSending request with start_date={start_date}")
     response = client.get(f"/orders/?start_date={start_date}", headers=headers)
+    print(f"Response status code: {response.status_code}")
+    
+    # Debug response content
+    try:
+        data = response.json()
+        print(f"Response data length: {len(data)}")
+        if len(data) > 0:
+            print(f"First order in response: {json.dumps(data[0], indent=2)}")
+        print(f"Order IDs in response: {[order.get('order_id') for order in data]}")
+    except Exception as e:
+        print(f"Error parsing response: {e}")
+        print(f"Raw response: {response.content}")
     assert response.status_code == 200
     data = response.json()
     
@@ -414,9 +433,11 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
     assert not has_yesterday_order, "Yesterday's order should not be included"
     
     # Test filtering by end_date only (today and earlier)
-    # Use ISO 8601 format for end_date as well
-    end_date = today.isoformat()
+    # Use YYYY-MM-DD format for end_date as well
+    end_date = today_date.strftime("%Y-%m-%d")
+    print(f"\nSending request with end_date={end_date}")
     response = client.get(f"/orders/?end_date={end_date}", headers=headers)
+    print(f"Response status code: {response.status_code}")
     assert response.status_code == 200
     data = response.json()
     
@@ -492,7 +513,7 @@ def test_get_orders_pagination(client, db_session, test_customer, test_product, 
     db_session.commit()
     
     # Set authentication headers
-    headers = {"Authorization": f"Bearer test_token_for_{test_customer.line_id}"}
+    headers = {"Authorization": f"Bearer {test_customer.line_id}"}
     
     # Test pagination - first page (2 items)
     response = client.get("/orders/?skip=0&limit=2", headers=headers)
