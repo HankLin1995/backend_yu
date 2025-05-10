@@ -191,6 +191,327 @@ def test_get_orders(client, db_session, test_customer, test_product, test_schedu
     assert len(data) >= 1
     assert any(o["order_id"] == order.order_id for o in data)
 
+def test_get_orders_filter_by_line_id(client, db_session, test_customer, test_product, test_schedule):
+    # Create test orders with different line_ids
+    # First order - with test_customer's line_id
+    order1 = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash"
+    )
+    db_session.add(order1)
+    db_session.flush()
+    
+    # Store the order_id value to avoid SQLAlchemy session issues later
+    order1_id = order1.order_id
+    
+    order_detail1 = OrderDetail(
+        order_id=order1_id,
+        product_id=test_product.product_id,
+        quantity=2,
+        unit_price=100.00,
+        subtotal=200.00
+    )
+    db_session.add(order_detail1)
+    
+    # Second order - with different line_id
+    different_customer = Customer(
+        line_id="different_test_id",
+        name="Different Customer",
+        line_name="Different Line Name",
+        line_pic_url="http://example.com/different_pic.jpg",
+        phone="0987654321"
+    )
+    db_session.add(different_customer)
+    db_session.flush()
+    
+    # Store different_customer.line_id to avoid session issues
+    different_line_id = different_customer.line_id
+    
+    order2 = Order(
+        line_id=different_line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=300.00,
+        payment_method="cash"
+    )
+    db_session.add(order2)
+    db_session.flush()
+    
+    # Store the order2 ID value
+    order2_id = order2.order_id
+    
+    order_detail2 = OrderDetail(
+        order_id=order2_id,
+        product_id=test_product.product_id,
+        quantity=3,
+        unit_price=100.00,
+        subtotal=300.00
+    )
+    db_session.add(order_detail2)
+    db_session.commit()
+    
+    # Need to set headers for authentication (using test_customer as authenticated user)
+    test_customer_line_id = test_customer.line_id
+    headers = {"Authorization": f"Bearer test_token_for_{test_customer_line_id}"}
+    
+    # Test filtering by test_customer's line_id
+    response = client.get(f"/orders/?line_id={test_customer_line_id}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Check that only orders with test_customer's line_id are returned
+    assert len(data) >= 1
+    assert all(o["line_id"] == test_customer_line_id for o in data)
+    
+    # Make sure our specific order is in the results
+    order1_found = False
+    for order in data:
+        if order["order_id"] == order1_id:
+            order1_found = True
+            break
+    assert order1_found, "Expected order not found in results"
+    
+    # Make sure the different customer's order is not in the results
+    order2_found = False
+    for order in data:
+        if order["order_id"] == order2_id:
+            order2_found = True
+            break
+    assert not order2_found, "Order from different customer should not be included"
+    
+    # Test filtering by different_customer's line_id (need to use different_customer's auth)
+    headers_different = {"Authorization": f"Bearer test_token_for_{different_line_id}"}
+    response = client.get(f"/orders/?line_id={different_line_id}", headers=headers_different)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Check that only orders with different_customer's line_id are returned
+    assert len(data) >= 1
+    assert all(o["line_id"] == different_line_id for o in data)
+    
+    # Check orders individually to avoid SQLAlchemy session issues
+    order2_found = False
+    order1_found = False
+    
+    for order in data:
+        if order["order_id"] == order2_id:
+            order2_found = True
+        if order["order_id"] == order1_id:
+            order1_found = True
+    
+    assert order2_found, "Expected order2 not found in results"
+    assert not order1_found, "Order1 should not be included in the results"
+
+def test_get_orders_filter_by_date(client, db_session, test_customer, test_product, test_schedule):
+    from datetime import datetime, timedelta
+    
+    # Store test_customer.line_id to avoid session issues
+    test_customer_line_id = test_customer.line_id
+    
+    # Create orders with different dates
+    # Order from yesterday
+    yesterday = datetime.now() - timedelta(days=1)
+    order_yesterday = Order(
+        line_id=test_customer_line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash",
+        order_date=yesterday
+    )
+    db_session.add(order_yesterday)
+    db_session.flush()
+    
+    # Store the order ID
+    order_yesterday_id = order_yesterday.order_id
+    
+    order_detail1 = OrderDetail(
+        order_id=order_yesterday_id,
+        product_id=test_product.product_id,
+        quantity=2,
+        unit_price=100.00,
+        subtotal=200.00
+    )
+    db_session.add(order_detail1)
+    
+    # Order from today
+    today = datetime.now()
+    order_today = Order(
+        line_id=test_customer_line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=300.00,
+        payment_method="cash",
+        order_date=today
+    )
+    db_session.add(order_today)
+    db_session.flush()
+    
+    # Store the order ID
+    order_today_id = order_today.order_id
+    
+    order_detail2 = OrderDetail(
+        order_id=order_today_id,
+        product_id=test_product.product_id,
+        quantity=3,
+        unit_price=100.00,
+        subtotal=300.00
+    )
+    db_session.add(order_detail2)
+    
+    # Order from tomorrow
+    tomorrow = datetime.now() + timedelta(days=1)
+    order_tomorrow = Order(
+        line_id=test_customer_line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=400.00,
+        payment_method="cash",
+        order_date=tomorrow
+    )
+    db_session.add(order_tomorrow)
+    db_session.flush()
+    
+    # Store the order ID
+    order_tomorrow_id = order_tomorrow.order_id
+    
+    order_detail3 = OrderDetail(
+        order_id=order_tomorrow_id,
+        product_id=test_product.product_id,
+        quantity=4,
+        unit_price=100.00,
+        subtotal=400.00
+    )
+    db_session.add(order_detail3)
+    db_session.commit()
+    
+    # Need to set headers for authentication (using test_customer as authenticated user)
+    headers = {"Authorization": f"Bearer test_token_for_{test_customer_line_id}"}
+    
+    # Test filtering by start_date only (today and later)
+    # Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS) which FastAPI expects for datetime
+    start_date = today.isoformat()
+    response = client.get(f"/orders/?start_date={start_date}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should include today and tomorrow orders, but not yesterday's
+    assert len(data) >= 2
+    
+    # Check each order individually to avoid SQLAlchemy session issues
+    has_today_order = False
+    has_tomorrow_order = False
+    has_yesterday_order = False
+    
+    for order in data:
+        if order["order_id"] == order_today_id:
+            has_today_order = True
+        if order["order_id"] == order_tomorrow_id:
+            has_tomorrow_order = True
+        if order["order_id"] == order_yesterday_id:
+            has_yesterday_order = True
+    
+    assert has_today_order, "Today's order should be included"
+    assert has_tomorrow_order, "Tomorrow's order should be included"
+    assert not has_yesterday_order, "Yesterday's order should not be included"
+    
+    # Test filtering by end_date only (today and earlier)
+    # Use ISO 8601 format for end_date as well
+    end_date = today.isoformat()
+    response = client.get(f"/orders/?end_date={end_date}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should include today and yesterday orders, but not tomorrow's
+    assert len(data) >= 2
+    
+    # Check each order individually
+    has_today_order = False
+    has_tomorrow_order = False
+    has_yesterday_order = False
+    
+    for order in data:
+        if order["order_id"] == order_today_id:
+            has_today_order = True
+        if order["order_id"] == order_tomorrow_id:
+            has_tomorrow_order = True
+        if order["order_id"] == order_yesterday_id:
+            has_yesterday_order = True
+    
+    assert has_today_order, "Today's order should be included"
+    assert has_yesterday_order, "Yesterday's order should be included"
+    assert not has_tomorrow_order, "Tomorrow's order should not be included"
+    
+    # Test filtering by both start_date and end_date (only today)
+    # Using the ISO 8601 formatted dates we defined above
+    response = client.get(f"/orders/?start_date={start_date}&end_date={end_date}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should include only today's order
+    assert len(data) >= 1
+    
+    # Check each order individually
+    has_today_order = False
+    has_tomorrow_order = False
+    has_yesterday_order = False
+    
+    for order in data:
+        if order["order_id"] == order_today_id:
+            has_today_order = True
+        if order["order_id"] == order_tomorrow_id:
+            has_tomorrow_order = True
+        if order["order_id"] == order_yesterday_id:
+            has_yesterday_order = True
+    
+    assert has_today_order, "Today's order should be included"
+    assert not has_yesterday_order, "Yesterday's order should not be included"
+    assert not has_tomorrow_order, "Tomorrow's order should not be included"
+
+def test_get_orders_pagination(client, db_session, test_customer, test_product, test_schedule):
+    # Create multiple orders for pagination testing
+    orders = []
+    for i in range(5):  # Create 5 orders
+        order = Order(
+            line_id=test_customer.line_id,
+            schedule_id=test_schedule.schedule_id,
+            total_amount=100.00 * (i + 1),
+            payment_method="cash"
+        )
+        db_session.add(order)
+        db_session.flush()
+        
+        order_detail = OrderDetail(
+            order_id=order.order_id,
+            product_id=test_product.product_id,
+            quantity=i + 1,
+            unit_price=100.00,
+            subtotal=100.00 * (i + 1)
+        )
+        db_session.add(order_detail)
+        orders.append(order)
+    
+    db_session.commit()
+    
+    # Set authentication headers
+    headers = {"Authorization": f"Bearer test_token_for_{test_customer.line_id}"}
+    
+    # Test pagination - first page (2 items)
+    response = client.get("/orders/?skip=0&limit=2", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    
+    # Test pagination - second page (2 items)
+    response = client.get("/orders/?skip=2&limit=2", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    
+    # Test pagination - third page (1 item remaining from our 5)
+    response = client.get("/orders/?skip=4&limit=2", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1  # At least our last order
+
 def test_get_order_by_id(client, db_session, test_customer, test_product, test_schedule):
     # 先從數據庫中重新查詢對象
     customer = db_session.query(Customer).filter(Customer.line_id == test_customer.line_id).first()

@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Optional
 from decimal import Decimal
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -164,8 +165,31 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
 
 
 @router.get("/", response_model=List[schemas.Order])
-def get_orders(skip: int = 0, limit: int = 100, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
-    orders = db.query(models.Order).offset(skip).limit(limit).all()
+def get_orders(
+    skip: int = 0, 
+    limit: int = 100, 
+    line_id: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+
+    current_user: Customer = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    # 建立基本查詢
+    query = db.query(models.Order)
+    
+    # 應用過濾條件
+    if line_id:
+        query = query.filter(models.Order.line_id == line_id)
+    
+    if start_date:
+        query = query.filter(models.Order.order_date >= start_date)
+    
+    if end_date:
+        query = query.filter(models.Order.order_date <= end_date)
+    
+    # 應用分頁
+    orders = query.offset(skip).limit(limit).all()
     
     # 產品資訊已通過 SQLAlchemy 關聯自動載入
     # 不需要額外處理
