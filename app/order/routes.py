@@ -353,6 +353,11 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 unit_display = product.unit if product else ""
                 remark = ""
             
+            if product.arrival_date and product.arrival_date>datetime.now():
+                remark = "未到貨"
+            else:
+                remark = "已到貨"
+
             # Add this order detail to our list
             all_order_data.append({
                 '訂單編號': order.order_id,
