@@ -175,22 +175,20 @@ def get_orders(
     current_user: Customer = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    # 建立基本查詢
-    query = db.query(models.Order)
+    # 建立基本查詢，使用 join 來關聯 Schedule
+    query = db.query(models.Order).join(Schedule)
     
     # 應用過濾條件
     if line_id:
         query = query.filter(models.Order.line_id == line_id)
     
     if start_date:
-        # Convert date to datetime at midnight for proper comparison
-        start_datetime = datetime.combine(start_date, datetime.min.time())
-        query = query.filter(models.Order.order_date >= start_datetime)
+        # 根據 Schedule 的日期進行過濾
+        query = query.filter(Schedule.date >= start_date)
     
     if end_date:
-        # Convert date to datetime at 23:59:59 for end of day
-        end_datetime = datetime.combine(end_date, datetime.max.time())
-        query = query.filter(models.Order.order_date <= end_datetime)
+        # 根據 Schedule 的日期進行過濾
+        query = query.filter(Schedule.date <= end_date)
     
     # 應用分頁
     orders = query.offset(skip).limit(limit).all()

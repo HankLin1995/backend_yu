@@ -311,92 +311,46 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
     # Store test_customer.line_id to avoid session issues
     test_customer_line_id = test_customer.line_id
     
-    # Create orders with different dates
-    # Create three distinct dates for testing
-    yesterday_date = datetime.now().date() - timedelta(days=1)
-    today_date = datetime.now().date()
-    tomorrow_date = datetime.now().date() + timedelta(days=1)
+    # Get current schedule's date for reference
+    schedule_date = test_schedule.date
+    # Calculate dates for testing
+    day_before = schedule_date - timedelta(days=1)
+    day_after = schedule_date + timedelta(days=1)
     
-    # Create order from yesterday
-    yesterday_dt = datetime.combine(yesterday_date, datetime.min.time())
-    order_yesterday = Order(
+    # Use the existing test_schedule
+    
+    # Create a test order with the existing schedule
+    order = Order(
         line_id=test_customer_line_id,
         schedule_id=test_schedule.schedule_id,
         total_amount=200.00,
-        payment_method="cash",
-        order_date=yesterday_dt
+        payment_method="cash"
     )
-    db_session.add(order_yesterday)
+    db_session.add(order)
     db_session.flush()
-    order_yesterday_id = order_yesterday.order_id
+    order_id = order.order_id
     
-    order_detail1 = OrderDetail(
-        order_id=order_yesterday_id,
+    order_detail = OrderDetail(
+        order_id=order_id,
         product_id=test_product.product_id,
         quantity=2,
         unit_price=100.00,
         subtotal=200.00
     )
-    db_session.add(order_detail1)
-    
-    # Create order from today
-    today_dt = datetime.combine(today_date, datetime.min.time())
-    order_today = Order(
-        line_id=test_customer_line_id,
-        schedule_id=test_schedule.schedule_id,
-        total_amount=300.00,
-        payment_method="cash",
-        order_date=today_dt
-    )
-    db_session.add(order_today)
-    db_session.flush()
-    order_today_id = order_today.order_id
-    
-    order_detail2 = OrderDetail(
-        order_id=order_today_id,
-        product_id=test_product.product_id,
-        quantity=3,
-        unit_price=100.00,
-        subtotal=300.00
-    )
-    db_session.add(order_detail2)
-    
-    # Create order from tomorrow
-    tomorrow_dt = datetime.combine(tomorrow_date, datetime.min.time())
-    order_tomorrow = Order(
-        line_id=test_customer_line_id,
-        schedule_id=test_schedule.schedule_id,
-        total_amount=400.00,
-        payment_method="cash",
-        order_date=tomorrow_dt
-    )
-    db_session.add(order_tomorrow)
-    db_session.flush()
-    order_tomorrow_id = order_tomorrow.order_id
-    
-    order_detail3 = OrderDetail(
-        order_id=order_tomorrow_id,
-        product_id=test_product.product_id,
-        quantity=4,
-        unit_price=100.00,
-        subtotal=400.00
-    )
-    db_session.add(order_detail3)
+    db_session.add(order_detail)
     db_session.commit()
     
-    # Need to set headers for authentication (using test_customer as authenticated user)
+    # Need to set headers for authentication
     headers = {"Authorization": f"Bearer {test_customer_line_id}"}
     print(f"\nTest setup details:")
-    print(f"- Yesterday's order ID: {order_yesterday_id}, date: {yesterday_dt}")
-    print(f"- Today's order ID: {order_today_id}, date: {today_dt}")
-    print(f"- Tomorrow's order ID: {order_tomorrow_id}, date: {tomorrow_dt}")
+    print(f"- Order ID: {order_id}, schedule date: {schedule_date}")
     print(f"- Authentication headers: {headers}")
     
-    # Test filtering by start_date only (today and later)
+    # Test filtering by exact schedule date
     # Use YYYY-MM-DD format which FastAPI expects for date
-    start_date = today_date.strftime("%Y-%m-%d")
-    print(f"\nSending request with start_date={start_date}")
-    response = client.get(f"/orders/?start_date={start_date}", headers=headers)
+    test_date = schedule_date.strftime("%Y-%m-%d")
+    print(f"\nSending request with start_date and end_date both equal to {test_date}")
+    response = client.get(f"/orders/?start_date={test_date}&end_date={test_date}", headers=headers)
     print(f"Response status code: {response.status_code}")
     
     # Debug response content
@@ -405,87 +359,36 @@ def test_get_orders_filter_by_date(client, db_session, test_customer, test_produ
         print(f"Response data length: {len(data)}")
         if len(data) > 0:
             print(f"First order in response: {json.dumps(data[0], indent=2)}")
-        print(f"Order IDs in response: {[order.get('order_id') for order in data]}")
+        print(f"Order IDs in response: {[o.get('order_id') for o in data]}")
     except Exception as e:
         print(f"Error parsing response: {e}")
         print(f"Raw response: {response.content}")
+    
     assert response.status_code == 200
     data = response.json()
     
-    # Should include today and tomorrow orders, but not yesterday's
-    assert len(data) >= 2
+    # Should include our order since it matches the date exactly
+    assert any(o.get('order_id') == order_id for o in data), "Order with matching schedule date should be included"
     
-    # Check each order individually to avoid SQLAlchemy session issues
-    has_today_order = False
-    has_tomorrow_order = False
-    has_yesterday_order = False
-    
-    for order in data:
-        if order["order_id"] == order_today_id:
-            has_today_order = True
-        if order["order_id"] == order_tomorrow_id:
-            has_tomorrow_order = True
-        if order["order_id"] == order_yesterday_id:
-            has_yesterday_order = True
-    
-    assert has_today_order, "Today's order should be included"
-    assert has_tomorrow_order, "Tomorrow's order should be included"
-    assert not has_yesterday_order, "Yesterday's order should not be included"
-    
-    # Test filtering by end_date only (today and earlier)
-    # Use YYYY-MM-DD format for end_date as well
-    end_date = today_date.strftime("%Y-%m-%d")
-    print(f"\nSending request with end_date={end_date}")
-    response = client.get(f"/orders/?end_date={end_date}", headers=headers)
-    print(f"Response status code: {response.status_code}")
+    # Test filtering by date before schedule date
+    before_date = day_before.strftime("%Y-%m-%d")
+    print(f"\nSending request with end_date={before_date} (before schedule date)")
+    response = client.get(f"/orders/?end_date={before_date}", headers=headers)
     assert response.status_code == 200
     data = response.json()
     
-    # Should include today and yesterday orders, but not tomorrow's
-    assert len(data) >= 2
+    # Should NOT include our order since schedule date is after the end_date
+    assert not any(o.get('order_id') == order_id for o in data), "Order should not be included when end_date is before schedule date"
     
-    # Check each order individually
-    has_today_order = False
-    has_tomorrow_order = False
-    has_yesterday_order = False
-    
-    for order in data:
-        if order["order_id"] == order_today_id:
-            has_today_order = True
-        if order["order_id"] == order_tomorrow_id:
-            has_tomorrow_order = True
-        if order["order_id"] == order_yesterday_id:
-            has_yesterday_order = True
-    
-    assert has_today_order, "Today's order should be included"
-    assert has_yesterday_order, "Yesterday's order should be included"
-    assert not has_tomorrow_order, "Tomorrow's order should not be included"
-    
-    # Test filtering by both start_date and end_date (only today)
-    # Using the ISO 8601 formatted dates we defined above
-    response = client.get(f"/orders/?start_date={start_date}&end_date={end_date}", headers=headers)
+    # Test filtering by date after schedule date
+    after_date = day_after.strftime("%Y-%m-%d")
+    print(f"\nSending request with start_date={after_date} (after schedule date)")
+    response = client.get(f"/orders/?start_date={after_date}", headers=headers)
     assert response.status_code == 200
     data = response.json()
     
-    # Should include only today's order
-    assert len(data) >= 1
-    
-    # Check each order individually
-    has_today_order = False
-    has_tomorrow_order = False
-    has_yesterday_order = False
-    
-    for order in data:
-        if order["order_id"] == order_today_id:
-            has_today_order = True
-        if order["order_id"] == order_tomorrow_id:
-            has_tomorrow_order = True
-        if order["order_id"] == order_yesterday_id:
-            has_yesterday_order = True
-    
-    assert has_today_order, "Today's order should be included"
-    assert not has_yesterday_order, "Yesterday's order should not be included"
-    assert not has_tomorrow_order, "Tomorrow's order should not be included"
+    # Should NOT include our order since schedule date is before the start_date
+    assert not any(o.get('order_id') == order_id for o in data), "Order should not be included when start_date is after schedule date"
 
 def test_get_orders_pagination(client, db_session, test_customer, test_product, test_schedule):
     # Create multiple orders for pagination testing
