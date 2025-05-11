@@ -258,7 +258,7 @@ def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate,
     if current_user.line_id != order.line_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this order")
 
-    valid_statuses = ["pending", "paid", "preparing", "ready_for_pickup", "completed", "cancelled"]
+    valid_statuses = ["pending", "paid", "preparing", "ready_for_pickup", "partial_completed", "completed", "cancelled"]
     if status_update.order_status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
 
@@ -322,6 +322,8 @@ STATUS_MAPPING = {
     "paid": "已付款",
     "preparing": "準備中",
     "ready_for_pickup": "可取貨",
+    #部分完成
+    "partial_completed": "分批取貨",
     "completed": "已完成",
     "cancelled": "已取消"
 }
