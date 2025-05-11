@@ -17,12 +17,12 @@ class Order(Base):
     __tablename__ = "orders"
 
     order_id = Column(Integer, primary_key=True, index=True)
-    line_id = Column(String, ForeignKey("customers.line_id"))
+    line_id = Column(String(255), ForeignKey("customers.line_id"))
     schedule_id = Column(Integer, ForeignKey("schedules.schedule_id"))
     order_date = Column(DateTime, default=datetime.utcnow)
-    order_status = Column(String, default="pending")
-    payment_method = Column(String, nullable=True)
-    payment_status = Column(String, default="pending")
+    order_status = Column(String(50), default="pending")
+    payment_method = Column(String(50), nullable=True)
+    payment_status = Column(String(50), default="pending")
     total_amount = Column(Numeric(10, 2))
     create_time = Column(DateTime, default=datetime.utcnow)
     update_time = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

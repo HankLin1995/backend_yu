@@ -9,3 +9,5 @@ httpx
 python-dotenv
 pydantic[email]
 Pillow
+gunicorn
+pymysql

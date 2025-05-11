@@ -23,13 +23,13 @@ class Product(Base):
     __tablename__ = "products"
 
     product_id = Column(Integer, primary_key=True, index=True)
-    product_name = Column(String, index=True)
-    description = Column(String)
+    product_name = Column(String(255), index=True)
+    description = Column(String(1000))
     price = Column(Float)  # 價格
     one_set_price = Column(Integer, nullable=True)  # 一組價格
     one_set_quantity = Column(Integer, nullable=True)  # 一組數量
     stock_quantity = Column(Integer)  # 庫存
-    unit = Column(String, nullable=True)  # 單位
+    unit = Column(String(50), nullable=True)  # 單位
     arrival_date = Column(Date, nullable=True)  # 到貨日期
     create_time = Column(DateTime, default=datetime.utcnow)
     # is_deleted = Column(Boolean, default=False)
@@ -43,7 +43,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     category_id = Column(Integer, primary_key=True, index=True)
-    category_name = Column(String, index=True)
+    category_name = Column(String(255), index=True)
     
     products = relationship("Product", secondary="products_categories", back_populates="categories")
 

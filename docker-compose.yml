@@ -6,24 +6,41 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      # - .:/app
       - "${PHOTOS_PATH}:/app/app/uploads"
-      - "${PHOTOS_PATH}/data:/app/data"
+      # - "${PHOTOS_PATH}/data:/app/data"
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=sqlite:///./data/app.db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - DATABASE_URL=mysql+pymysql://root:example@mysql:3306/appdb
+    depends_on:
+      - mysql
+    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
     networks:
       - app-network
 
   test:
     build: .
-    volumes:
-      - .:/app
+    # volumes:
+    #   - .:/app
     environment:
       - ENVIRONMENT=test
       - DATABASE_URL=sqlite:///./test.db
     command: pytest -v
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: appdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -31,6 +48,9 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+
+volumes:
+  mysql_data:
 
 networks:
   app-network:
