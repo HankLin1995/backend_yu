@@ -9,6 +9,7 @@ from app.db import Base
 #     "paid": "已付款",
 #     "preparing": "準備中",
 #     "ready_for_pickup": "可取貨",
+#     "partial_completed": "部分完成",
 #     "completed": "已完成",
 #     "cancelled": "已取消"
 # }
