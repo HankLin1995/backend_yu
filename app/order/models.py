@@ -1,9 +1,17 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db import Base
 
+# STATUS_MAPPING = {
+#     "pending": "待處理",
+#     "paid": "已付款",
+#     "preparing": "準備中",
+#     "ready_for_pickup": "可取貨",
+#     "completed": "已完成",
+#     "cancelled": "已取消"
+# }
 
 class Order(Base):
     __tablename__ = "orders"
@@ -35,6 +43,7 @@ class OrderDetail(Base):
     unit_price = Column(Numeric(10, 2))
     subtotal = Column(Numeric(10, 2))
     discount_id = Column(Integer, ForeignKey("product_discounts.discount_id"), nullable=True)
+    is_finish = Column(Boolean, default=False)
 
     # Relationships
     order = relationship("Order", back_populates="order_details")

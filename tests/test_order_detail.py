@@ -117,6 +117,7 @@ def test_add_order_detail(client, db_session, test_order, test_product):
     assert len(data["order_details"]) == 1
     assert data["order_details"][0]["product_id"] == product.product_id
     assert data["order_details"][0]["quantity"] == 2
+    assert data["order_details"][0]["is_finish"] == False  # Verify is_finish is initialized to False
     assert data["total_amount"] == float(product.price) * 2
     
     # Verify stock was reduced - get a fresh instance of the product
@@ -432,5 +433,69 @@ def test_delete_order_detail_not_found(client, test_order):
 def test_delete_order_detail_order_not_found(client):
     """Test deleting an order detail from a non-existent order"""
     response = client.delete("/orders/99999/details/1")
+    assert response.status_code == 404
+    assert "Order not found" in response.json()["detail"]
+
+
+def test_update_order_detail_finish_status(client, db_session, test_order, test_product):
+    """Test updating the finish status of an order detail"""
+    # First create an order detail
+    order = db_session.query(Order).filter(Order.order_id == test_order.order_id).first()
+    product = db_session.query(Product).filter(Product.product_id == test_product.product_id).first()
+    
+    # Create an order detail
+    order_detail = OrderDetail(
+        order_id=order.order_id,
+        product_id=product.product_id,
+        quantity=2,
+        unit_price=float(product.price),
+        subtotal=float(product.price) * 2,
+        is_finish=False  # Initially not finished
+    )
+    db_session.add(order_detail)
+    db_session.commit()
+    db_session.refresh(order_detail)
+    
+    # Verify initial state
+    assert order_detail.is_finish == False
+    
+    # Store IDs before any operations
+    order_id = order.order_id
+    detail_id = order_detail.order_detail_id
+    
+    # Update to finished status
+    response = client.put(f"/orders/{order_id}/details/{detail_id}/finish?is_finish=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_finish"] == True
+    assert "Order detail finish status updated successfully" in data["message"]
+    
+    # Verify database was updated
+    db_session.expire_all()
+    updated_detail = db_session.query(OrderDetail).filter(OrderDetail.order_detail_id == detail_id).first()
+    assert updated_detail.is_finish == True
+    
+    # Update back to not finished
+    response = client.put(f"/orders/{order_id}/details/{detail_id}/finish?is_finish=false")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_finish"] == False
+    
+    # Verify database was updated again
+    db_session.expire_all()
+    updated_detail = db_session.query(OrderDetail).filter(OrderDetail.order_detail_id == detail_id).first()
+    assert updated_detail.is_finish == False
+
+
+def test_update_order_detail_finish_status_not_found(client, test_order):
+    """Test updating finish status for a non-existent order detail"""
+    response = client.put(f"/orders/{test_order.order_id}/details/99999/finish?is_finish=true")
+    assert response.status_code == 404
+    assert "Order detail not found" in response.json()["detail"]
+
+
+def test_update_order_detail_finish_status_order_not_found(client):
+    """Test updating finish status for an order detail in a non-existent order"""
+    response = client.put("/orders/99999/details/1/finish?is_finish=true")
     assert response.status_code == 404
     assert "Order not found" in response.json()["detail"]

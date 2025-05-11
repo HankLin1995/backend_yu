@@ -11,6 +11,7 @@ class OrderDetailBase(BaseModel):
     unit_price: float
     subtotal: float
     discount_id: Optional[int] = None
+    is_finish: bool = False
 
 
 class OrderDetailCreate(OrderDetailBase):

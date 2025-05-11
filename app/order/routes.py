@@ -306,7 +306,7 @@ def delete_order(order_id: int, current_user: Customer = Depends(get_current_use
         )
     
     # If order is in processing state, restore stock
-    if order.order_status == "processing":
+    if order.order_status == "pending":
         for detail in order.order_details:
             product = detail.product
             product.stock += detail.quantity
@@ -372,3 +372,26 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
             })
     
     return all_order_data
+
+
+@router.put("/{order_id}/details/{detail_id}/finish")
+def update_order_detail_finish_status(order_id: int, detail_id: int, is_finish: bool, db: Session = Depends(get_db)):
+    # 檢查訂單是否存在
+    order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 檢查訂單明細是否存在
+    order_detail = db.query(models.OrderDetail).filter(
+        models.OrderDetail.order_detail_id == detail_id,
+        models.OrderDetail.order_id == order_id
+    ).first()
+    if order_detail is None:
+        raise HTTPException(status_code=404, detail="Order detail not found")
+    
+    # 更新領取狀態
+    order_detail.is_finish = is_finish
+    db.commit()
+    db.refresh(order_detail)
+    
+    return {"message": "Order detail finish status updated successfully", "is_finish": order_detail.is_finish}
