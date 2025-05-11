@@ -36,7 +36,7 @@ services:
       MYSQL_ROOT_PASSWORD: example
       MYSQL_DATABASE: appdb
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
