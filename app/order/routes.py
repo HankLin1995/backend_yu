@@ -288,7 +288,7 @@ def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUp
     db.refresh(order)
     return order
 
-@router.put("/{order_id}/schedule")
+@router.patch("/{order_id}/schedule")
 def update_order_schedule(order_id: int, schedule_update: schemas.OrderScheduleUpdate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # Check if order exists
     order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
