@@ -288,6 +288,38 @@ def update_payment_status(order_id: int, payment_update: schemas.PaymentStatusUp
     db.refresh(order)
     return order
 
+@router.put("/{order_id}/schedule")
+def update_order_schedule(order_id: int, schedule_update: schemas.OrderScheduleUpdate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check if order exists
+    order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check if user is authorized
+    if order.line_id != current_user.line_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this order")
+    
+    # Check if the order status allows schedule changes
+    if order.order_status in ["completed", "cancelled"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot update schedule for completed or cancelled orders"
+        )
+    
+    # Check if the new schedule exists
+    schedule = db.query(Schedule).filter(Schedule.schedule_id == schedule_update.schedule_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    
+    # Update schedule_id
+    order.schedule_id = schedule_update.schedule_id
+    order.update_time = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(order)
+    
+    return {"message": "Order schedule updated successfully", "schedule_id": order.schedule_id}
+
 @router.delete("/{order_id}")
 def delete_order(order_id: int, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # 先檢查訂單是否存在

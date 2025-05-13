@@ -63,3 +63,9 @@ class PaymentStatusUpdate(BaseModel):
     payment_status: str = Field(
         description="Payment status: pending, paid, refunded"
     )
+
+
+class OrderScheduleUpdate(BaseModel):
+    schedule_id: int = Field(
+        description="The ID of the new schedule for the order"
+    )
