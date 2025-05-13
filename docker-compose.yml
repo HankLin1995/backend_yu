@@ -12,8 +12,9 @@ services:
       - ENVIRONMENT=production
       - DATABASE_URL=mysql+pymysql://root:example@mysql:3306/appdb
     depends_on:
-      - mysql
-    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+      mysql:
+        condition: service_healthy
+    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile "-"
     networks:
       - app-network
 
@@ -41,6 +42,11 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   cloudflared:
     image: cloudflare/cloudflared:latest
