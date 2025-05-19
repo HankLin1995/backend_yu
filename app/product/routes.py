@@ -230,14 +230,93 @@ def list_product_discounts(product_id: int, db: Session = Depends(get_db)):
     return product.discounts
 
 @router.delete("/products/{product_id}/discounts", tags=["Product Discounts"])
-
 def delete_all_product_discounts(product_id: int, db: Session = Depends(get_db)):
     product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if any discounts are referenced in order_details
+    from app.order.models import OrderDetail
+    referenced_discounts = db.query(OrderDetail).join(
+        models.ProductDiscount,
+        OrderDetail.discount_id == models.ProductDiscount.discount_id
+    ).filter(models.ProductDiscount.product_id == product_id).first()
+    
+    if referenced_discounts:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete discounts: Some discounts are referenced in orders. Please remove these references first."
+        )
+    
+    # If no references exist, proceed with deletion
     db.query(models.ProductDiscount).filter(models.ProductDiscount.product_id == product_id).delete()
     db.commit()
     return {"message": "All discounts deleted successfully"}
+
+@router.put("/products/{product_id}/discounts", response_model=List[schemas.ProductDiscount], tags=["Product Discounts"])
+def update_product_discounts(product_id: int, discounts: List[schemas.ProductDiscountCreate], db: Session = Depends(get_db)):
+    """
+    更新產品折扣，採用安全策略：
+    1. 保留已被訂單引用的折扣
+    2. 刪除未被引用且不在新列表中的折扣
+    3. 新增或更新需要的折扣
+    """
+    # 檢查產品是否存在
+    product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # 從訂單詳情中獲取被引用的折扣ID
+    from app.order.models import OrderDetail
+    referenced_discount_ids = db.query(models.ProductDiscount.discount_id).join(
+        OrderDetail,
+        OrderDetail.discount_id == models.ProductDiscount.discount_id
+    ).filter(models.ProductDiscount.product_id == product_id).distinct().all()
+    referenced_discount_ids = [id[0] for id in referenced_discount_ids]  # 轉換為簡單列表
+    
+    # 獲取當前所有折扣
+    current_discounts = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id
+    ).all()
+    
+    # 創建當前折扣的映射 (quantity -> discount)
+    current_discount_map = {d.quantity: d for d in current_discounts}
+    
+    # 新的折扣數量集合
+    new_quantities = {d.quantity for d in discounts}
+    
+    # 處理每個新折扣
+    result_discounts = []
+    for discount_data in discounts:
+        # 檢查是否已存在相同數量的折扣
+        if discount_data.quantity in current_discount_map:
+            existing_discount = current_discount_map[discount_data.quantity]
+            # 更新現有折扣的價格
+            existing_discount.price = discount_data.price
+            result_discounts.append(existing_discount)
+        else:
+            # 創建新折扣
+            new_discount = models.ProductDiscount(
+                product_id=product_id,
+                quantity=discount_data.quantity,
+                price=discount_data.price
+            )
+            db.add(new_discount)
+            result_discounts.append(new_discount)
+    
+    # 刪除未被引用且不在新列表中的折扣
+    for discount in current_discounts:
+        if discount.quantity not in new_quantities and discount.discount_id not in referenced_discount_ids:
+            db.delete(discount)
+    
+    db.commit()
+    
+    # 重新獲取所有折扣以確保數據最新
+    updated_discounts = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id
+    ).all()
+    
+    return updated_discounts
 
 
 # @router.get("/products/{product_id}", response_model=schemas.Product)
