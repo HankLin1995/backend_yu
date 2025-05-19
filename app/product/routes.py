@@ -285,22 +285,22 @@ def delete_all_product_discounts(product_id: int, db: Session = Depends(get_db))
 def update_product_discounts(product_id: int, discounts: List[schemas.ProductDiscountCreate], db: Session = Depends(get_db)):
     """
     更新產品折扣，採用安全策略：
-    1. 保留已被訂單引用的折扣
-    2. 刪除未被引用且不在新列表中的折扣
-    3. 新增或更新需要的折扣
+    1. 檢查每個折扣的quantity是否已被訂單使用
+    2. 如果已被使用，則跳過該折扣的更新
+    3. 如果未被使用，則新增或更新該折扣
     """
     # 檢查產品是否存在
     product = db.query(models.Product).filter(models.Product.product_id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # 從訂單詳情中獲取被引用的折扣ID
+    # 從訂單詳情中獲取被使用的折扣數量
     from app.order.models import OrderDetail
-    referenced_discount_ids = db.query(models.ProductDiscount.discount_id).join(
+    used_quantities = db.query(models.ProductDiscount.quantity).join(
         OrderDetail,
         OrderDetail.discount_id == models.ProductDiscount.discount_id
     ).filter(models.ProductDiscount.product_id == product_id).distinct().all()
-    referenced_discount_ids = [id[0] for id in referenced_discount_ids]  # 轉換為簡單列表
+    used_quantities = [q[0] for q in used_quantities]  # 轉換為簡單列表
     
     # 獲取當前所有折扣
     current_discounts = db.query(models.ProductDiscount).filter(
@@ -310,31 +310,38 @@ def update_product_discounts(product_id: int, discounts: List[schemas.ProductDis
     # 創建當前折扣的映射 (quantity -> discount)
     current_discount_map = {d.quantity: d for d in current_discounts}
     
-    # 新的折扣數量集合
-    new_quantities = {d.quantity for d in discounts}
+    # 記錄跳過和處理的折扣
+    skipped_discounts = []
+    processed_discounts = []
     
     # 處理每個新折扣
-    result_discounts = []
     for discount_data in discounts:
-        # 檢查是否已存在相同數量的折扣
-        if discount_data.quantity in current_discount_map:
-            existing_discount = current_discount_map[discount_data.quantity]
-            # 更新現有折扣的價格
-            existing_discount.price = discount_data.price
-            result_discounts.append(existing_discount)
+        # 檢查該數量是否已被訂單使用
+        if discount_data.quantity in used_quantities:
+            # 如果已被使用，則跳過該折扣
+            if discount_data.quantity in current_discount_map:
+                skipped_discounts.append(current_discount_map[discount_data.quantity])
         else:
-            # 創建新折扣
-            new_discount = models.ProductDiscount(
-                product_id=product_id,
-                quantity=discount_data.quantity,
-                price=discount_data.price
-            )
-            db.add(new_discount)
-            result_discounts.append(new_discount)
+            # 如果未被使用，則新增或更新
+            if discount_data.quantity in current_discount_map:
+                # 更新現有折扣
+                existing_discount = current_discount_map[discount_data.quantity]
+                existing_discount.price = discount_data.price
+                processed_discounts.append(existing_discount)
+            else:
+                # 創建新折扣
+                new_discount = models.ProductDiscount(
+                    product_id=product_id,
+                    quantity=discount_data.quantity,
+                    price=discount_data.price
+                )
+                db.add(new_discount)
+                processed_discounts.append(new_discount)
     
-    # 刪除未被引用且不在新列表中的折扣
+    # 刪除未被使用且不在新列表中的折扣
+    new_quantities = {d.quantity for d in discounts}
     for discount in current_discounts:
-        if discount.quantity not in new_quantities and discount.discount_id not in referenced_discount_ids:
+        if discount.quantity not in new_quantities and discount.quantity not in used_quantities:
             db.delete(discount)
     
     db.commit()
@@ -343,6 +350,15 @@ def update_product_discounts(product_id: int, discounts: List[schemas.ProductDis
     updated_discounts = db.query(models.ProductDiscount).filter(
         models.ProductDiscount.product_id == product_id
     ).all()
+    
+    # 如果有跳過的折扣，添加警告訊息
+    if skipped_discounts:
+        skipped_quantities = [str(d.quantity) for d in skipped_discounts]
+        warning_message = f"Warning: Discounts for quantities {', '.join(skipped_quantities)} are already in use and were not updated."
+        # 在正常情況下，我們可以使用響應標頭或其他方式返回警告
+        # 但在這裡，我們只能返回折扣列表
+        # 可以在日誌中記錄警告或考慮其他方式通知用戶
+        print(warning_message)  # 在日誌中記錄
     
     return updated_discounts
 
