@@ -235,23 +235,51 @@ def delete_all_product_discounts(product_id: int, db: Session = Depends(get_db))
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # Check if any discounts are referenced in order_details
+    # 獲取該產品的所有折扣
+    discounts = db.query(models.ProductDiscount).filter(
+        models.ProductDiscount.product_id == product_id
+    ).all()
+    
+    if not discounts:
+        return {"message": "No discounts found for this product"}
+    
+    # 從order_details中獲取被引用的折扣ID列表
     from app.order.models import OrderDetail
-    referenced_discounts = db.query(OrderDetail).join(
-        models.ProductDiscount,
+    referenced_discount_ids = db.query(models.ProductDiscount.discount_id).join(
+        OrderDetail,
         OrderDetail.discount_id == models.ProductDiscount.discount_id
-    ).filter(models.ProductDiscount.product_id == product_id).first()
+    ).filter(models.ProductDiscount.product_id == product_id).distinct().all()
     
-    if referenced_discounts:
-        raise HTTPException(
-            status_code=400, 
-            detail="Cannot delete discounts: Some discounts are referenced in orders. Please remove these references first."
-        )
+    # 轉換為簡單列表
+    referenced_ids = [id[0] for id in referenced_discount_ids]
     
-    # If no references exist, proceed with deletion
-    db.query(models.ProductDiscount).filter(models.ProductDiscount.product_id == product_id).delete()
+    # 計數器
+    deleted_count = 0
+    skipped_count = 0
+    
+    # 逐個檢查並刪除未被引用的折扣
+    for discount in discounts:
+        if discount.discount_id in referenced_ids:
+            # 跳過被引用的折扣
+            skipped_count += 1
+        else:
+            # 刪除未被引用的折扣
+            db.delete(discount)
+            deleted_count += 1
+    
     db.commit()
-    return {"message": "All discounts deleted successfully"}
+    
+    # 返回結果訊息
+    if skipped_count > 0 and deleted_count > 0:
+        return {
+            "message": f"Deleted {deleted_count} discounts successfully. Skipped {skipped_count} discounts that are referenced in orders."
+        }
+    elif skipped_count > 0:
+        return {
+            "message": f"No discounts were deleted. Skipped {skipped_count} discounts that are referenced in orders."
+        }
+    else:
+        return {"message": "All discounts deleted successfully"}
 
 @router.put("/products/{product_id}/discounts", response_model=List[schemas.ProductDiscount], tags=["Product Discounts"])
 def update_product_discounts(product_id: int, discounts: List[schemas.ProductDiscountCreate], db: Session = Depends(get_db)):

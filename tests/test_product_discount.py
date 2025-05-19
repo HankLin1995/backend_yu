@@ -266,12 +266,25 @@ def test_update_product_discounts_with_referenced_discounts(client, db_session):
     assert new_discount is not None
     assert new_discount["price"] == 600
     
-    # 嘗試刪除所有折扣，應該會失敗因為有引用
+    # 嘗試刪除折扣，應該只刪除未被引用的折扣
     response = client.delete(f"/products/{product_id}/discounts")
-    assert response.status_code == 400  # 應該返回400錯誤
-    assert "Cannot delete discounts" in response.json()["detail"]
+    assert response.status_code == 200
+    message = response.json()["message"]
+    assert "Skipped" in message
+    assert "Deleted" in message or "No discounts were deleted" in message
     
-    # 驗證折扣仍然存在
+    # 驗證被引用的折扣仍然存在
     response = client.get(f"/products/{product_id}/discounts")
     assert response.status_code == 200
-    assert len(response.json()) == 2  # 應該有2個折扣
+    data = response.json()
+    
+    # 應該至少有一個折扣保留（已引用的）
+    assert len(data) >= 1
+    
+    # 確認已引用的折扣仍然存在
+    found_referenced = False
+    for d in data:
+        if d["quantity"] == 5 and d["discount_id"] == discount1_id:
+            found_referenced = True
+            break
+    assert found_referenced
