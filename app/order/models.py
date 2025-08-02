@@ -18,7 +18,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     order_id = Column(Integer, primary_key=True, index=True)
-    line_id = Column(String(255), ForeignKey("customers.line_id"))
+    line_id = Column(String(100), ForeignKey("customers.line_id"))
     schedule_id = Column(Integer, ForeignKey("schedules.schedule_id"))
     order_date = Column(DateTime, default=datetime.utcnow)
     order_status = Column(String(50), default="pending")
