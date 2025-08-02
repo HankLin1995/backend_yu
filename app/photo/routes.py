@@ -10,11 +10,18 @@ import hashlib
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
+# def get_upload_dir():
+#     """Get the upload directory path from environment or default"""
+#     upload_dir = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
+#     os.makedirs(upload_dir, exist_ok=True)
+#     return upload_dir
 def get_upload_dir():
-    """Get the upload directory path from environment or default"""
-    upload_dir = os.getenv('UPLOAD_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
-    os.makedirs(upload_dir, exist_ok=True)
+    """Get the upload directory path - using fixed path for Docker setup"""
+    # 使用固定路徑，與 docker-compose.yml 中的卷掛載一致
+    upload_dir = "/app/app/uploads"
+    # 不再自動創建目錄，因為 Docker 卷掛載會處理這個問題
     return upload_dir
+
 
 @router.post("/upload/", response_model=schemas.Photo)
 async def upload_photo(
