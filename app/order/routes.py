@@ -3,12 +3,12 @@ from decimal import Decimal
 from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.db import get_db
-from app.order import models, schemas
-from app.product.models import Product
-from app.photo.models import ProductPhoto
+from app.auth.dependencies import get_current_user
 from app.customer.models import Customer
+from app.product.models import Product, ProductDiscount
+from app.photo.models import ProductPhoto
+from app.order import models, schemas
 from app.auth.dependencies import get_current_user
 from app.location.models import PickupLocation, Schedule
 
@@ -138,18 +138,74 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
         
         # Reduce stock
         product.stock_quantity -= actual_quantity
-
-        # Create order detail
+        
+        # 獲取產品價格並檢查折扣
+        unit_price = float(product.price)  # 默認使用基本價格
+        discount_id = None
+        
+        # 優先檢查前端傳來的折扣 ID
+        if detail.discount_id:
+            # 驗證折扣是否存在且適用於該產品
+            discount = db.query(ProductDiscount).filter(
+                ProductDiscount.discount_id == detail.discount_id,
+                ProductDiscount.product_id == product.product_id
+            ).first()
+            
+            # 如果找到有效的折扣，使用其價格
+            if discount:
+                discount_id = discount.discount_id
+                unit_price = float(discount.price)  # 使用折扣價格
+                # 折扣價格已經是總價，不需要再乘以數量
+                subtotal = unit_price
+                
+                # 創建訂單詳情，使用後端計算的價格
+                db_detail = models.OrderDetail(
+                    order_id=db_order.order_id,
+                    product_id=detail.product_id,
+                    quantity=detail.quantity,
+                    unit_price=unit_price,  # 使用後端計算的單價
+                    subtotal=subtotal,      # 使用後端計算的小計
+                    discount_id=discount_id
+                )
+                db.add(db_detail)
+                total_amount += subtotal
+                
+                # 跳過後面的計算，直接處理下一個訂單項目
+                continue
+        
+        # 如果沒有前端折扣 ID 或折扣無效，則根據數量查詢折扣
+        # 直接尋找與購買數量完全匹配的折扣
+        discount = db.query(ProductDiscount).filter(
+            ProductDiscount.product_id == product.product_id,
+            ProductDiscount.quantity == detail.quantity  # 購買數量完全匹配折扣要求數量
+        ).first()
+        
+        # 如果找到完全匹配的折扣，使用其價格
+        if discount:
+            discount_id = discount.discount_id
+            unit_price = float(discount.price)  # 使用折扣價格
+            # 折扣價格已經是總價，不需要再乘以數量
+            subtotal = unit_price
+        # 如果沒有找到完全匹配的折扣但產品有套裝價格，使用套裝價格
+        elif hasattr(product, 'one_set_price') and product.one_set_price:  
+            unit_price = float(product.one_set_price)
+            # 套裝價格需要乘以數量
+            subtotal = unit_price * detail.quantity
+        else:
+            # 一般價格需要乘以數量
+            subtotal = unit_price * detail.quantity
+        
+        # 創建訂單詳情，使用後端計算的價格
         db_detail = models.OrderDetail(
             order_id=db_order.order_id,
             product_id=detail.product_id,
             quantity=detail.quantity,
-            unit_price=detail.unit_price,  # 使用前端傳來的單價
-            subtotal=detail.subtotal,      # 使用前端傳來的小計
-            discount_id=detail.discount_id
+            unit_price=unit_price,  # 使用後端計算的單價
+            subtotal=subtotal,      # 使用後端計算的小計
+            discount_id=discount_id
         )
         db.add(db_detail)
-        total_amount += detail.subtotal
+        total_amount += subtotal
 
     # Update order total
     db_order.total_amount = total_amount
