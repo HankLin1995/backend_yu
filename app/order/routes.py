@@ -207,8 +207,8 @@ def get_order(order_id: int, current_user: Customer = Depends(get_current_user),
         raise HTTPException(status_code=404, detail="Order not found")
     
     # 如果存在，再檢查授權
-    if current_user.line_id != order.line_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this order")
+    # if current_user.line_id != order.line_id:
+    #     raise HTTPException(status_code=403, detail="Not authorized to access this order")
     
     # 增強訂單詳細資訊
     for detail in order.order_details:
