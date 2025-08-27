@@ -487,3 +487,56 @@ def update_order_detail_finish_status(order_id: int, detail_id: int, is_finish: 
     db.refresh(order_detail)
     
     return {"message": "Order detail finish status updated successfully", "is_finish": order_detail.is_finish}
+
+@router.get("/by-product/{product_id}/simple")
+def get_orders_by_product_simple(product_id: int, db: Session = Depends(get_db)):
+    """
+    Get simplified information for all orders containing a specific product ID.
+    Returns only essential order information: order ID, customer name, pickup location, 
+    pickup date, pickup time, order amount, and order items.
+    """
+    # 查詢包含特定產品的所有訂單
+    orders = db.query(models.Order)\
+        .join(models.OrderDetail, models.Order.order_id == models.OrderDetail.order_id)\
+        .filter(models.OrderDetail.product_id == product_id)\
+        .distinct()\
+        .all()
+    
+    result = []
+    
+    for order in orders:
+        # 獲取客戶資訊
+        customer = db.query(Customer).filter(Customer.line_id == order.line_id).first()
+        
+        # 獲取取貨時間與地點資訊
+        schedule = db.query(Schedule).filter(Schedule.schedule_id == order.schedule_id).first()
+        location = None
+        if schedule:
+            location = db.query(PickupLocation).filter(PickupLocation.location_id == schedule.location_id).first()
+        
+        # 獲取訂單項目
+        order_items = []
+        for detail in order.order_details:
+            product = db.query(Product).filter(Product.product_id == detail.product_id).first()
+            if product:
+                order_items.append({
+                    "product_name": product.product_name,
+                    "quantity": detail.quantity,
+                    "unit": product.unit,
+                    "subtotal": float(detail.subtotal)
+                })
+        
+        # 建立簡化的訂單資訊
+        order_info = {
+            "訂單編號": order.order_id,
+            "訂購人": customer.name if customer else "",
+            "取貨地點": location.name if location else "",
+            "取貨日期": schedule.date.isoformat() if schedule and schedule.date else "",
+            "取貨時間": f"{schedule.pickup_start_time} - {schedule.pickup_end_time}" if schedule else "",
+            "訂購金額": float(order.total_amount),
+            "訂購項目": order_items
+        }
+        
+        result.append(order_info)
+    
+    return result
