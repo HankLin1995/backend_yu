@@ -19,12 +19,14 @@ class Order(Base):
 
     order_id = Column(Integer, primary_key=True, index=True)
     line_id = Column(String(100), ForeignKey("customers.line_id"))
-    schedule_id = Column(Integer, ForeignKey("schedules.schedule_id"))
+    schedule_id = Column(Integer, ForeignKey("schedules.schedule_id"), nullable=True)  # 允許為 NULL
     order_date = Column(DateTime, default=datetime.utcnow)
     order_status = Column(String(50), default="pending")
     payment_method = Column(String(50), nullable=True)
     payment_status = Column(String(50), default="pending")
     total_amount = Column(Numeric(10, 2))
+    delivery_address = Column(String(255), nullable=True)  # 新增配送地址欄位
+    delivery_method = Column(String(50), nullable=True)  # 新增配送方式欄位
     create_time = Column(DateTime, default=datetime.utcnow)
     update_time = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

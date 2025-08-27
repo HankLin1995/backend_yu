@@ -105,12 +105,35 @@ def delete_order_detail(order_id: int, detail_id: int, db: Session = Depends(get
 def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # Create new order
     total_amount = 0
-    db_order = models.Order(
-        line_id=order.line_id,
-        schedule_id=order.schedule_id,
-        payment_method=order.payment_method,
-        total_amount=total_amount
-    )
+    
+    # 檢查是否為超商取貨或宅配，這些情況下不需要 schedule_id
+    if hasattr(order, 'delivery_method') and order.delivery_method in ['convenience_store', 'home_delivery']:
+        # 創建訂單時不包含 schedule_id
+        db_order = models.Order(
+            line_id=order.line_id,
+            payment_method=order.payment_method,
+            total_amount=total_amount,
+            delivery_method=order.delivery_method  # 確保保存配送方式
+        )
+        # 如果有提供配送地址，保存它
+        if hasattr(order, 'delivery_address') and order.delivery_address:
+            db_order.delivery_address = order.delivery_address
+            
+        # 記錄配送方式到日誌
+        print(f"Creating order with delivery method: {order.delivery_method} and address: {getattr(order, 'delivery_address', 'Not provided')}")
+
+    else:
+        # 店鋪取貨，需要 schedule_id
+        db_order = models.Order(
+            line_id=order.line_id,
+            schedule_id=order.schedule_id,
+            payment_method=order.payment_method,
+            total_amount=total_amount,
+            delivery_method="store_pickup"  # 設定為店鋪取貨
+        )
+        # 記錄店鋪取貨到日誌
+        print(f"Creating order with store pickup, schedule_id: {order.schedule_id}")
+    
     db.add(db_order)
     db.flush()  # Get order_id without committing
 
