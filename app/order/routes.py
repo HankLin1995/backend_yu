@@ -483,7 +483,9 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 '備註': remark,
                 '明細編號': order_detail.order_detail_id,
                 '領取狀態': "已領取" if order_detail.is_finish else "未領取",
-                '訂單狀態': STATUS_MAPPING.get(order.order_status, '')
+                '訂單狀態': STATUS_MAPPING.get(order.order_status, ''),
+                "配送方式": order.delivery_method,
+                "配送地址": order.delivery_address,
             })
     
     return all_order_data
