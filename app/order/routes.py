@@ -333,9 +333,9 @@ def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate,
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # 如果存在，再檢查授權
-    if current_user.line_id != order.line_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this order")
+    # # 如果存在，再檢查授權
+    # if current_user.line_id != order.line_id:
+    #     raise HTTPException(status_code=403, detail="Not authorized to update this order")
 
     valid_statuses = ["pending", "paid", "preparing", "ready_for_pickup", "partial_completed", "completed", "cancelled"]
     if status_update.order_status not in valid_statuses:
