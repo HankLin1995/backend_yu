@@ -104,8 +104,8 @@ def delete_order_detail(order_id: int, detail_id: int, db: Session = Depends(get
 @router.post("/", response_model=schemas.Order)
 def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
     # Create new order
-    total_amount = 0
-    
+    total_amount = order.total_amount # 取用前端過來的 total_amount
+
     # 檢查是否為超商取貨或宅配，這些情況下不需要 schedule_id
     if hasattr(order, 'delivery_method') and order.delivery_method in ['convenience_store', 'home_delivery']:
         # 創建訂單時不包含 schedule_id
@@ -186,8 +186,10 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
                     order_id=db_order.order_id,
                     product_id=detail.product_id,
                     quantity=detail.quantity,
-                    unit_price=unit_price,  # 使用後端計算的單價
-                    subtotal=subtotal,      # 使用後端計算的小計
+                    # unit_price=unit_price,  # 使用後端計算的單價
+                    # subtotal=subtotal,      # 使用後端計算的小計
+                    unit_price=detail.unit_price, # 使用前端傳來的單價
+                    subtotal=detail.subtotal, # 使用前端傳來的小計
                     discount_id=discount_id
                 )
                 db.add(db_detail)
@@ -223,15 +225,17 @@ def create_order(order: schemas.OrderCreate, current_user: Customer = Depends(ge
             order_id=db_order.order_id,
             product_id=detail.product_id,
             quantity=detail.quantity,
-            unit_price=unit_price,  # 使用後端計算的單價
-            subtotal=subtotal,      # 使用後端計算的小計
+            # unit_price=unit_price,  # 使用後端計算的單價
+            # subtotal=subtotal,      # 使用後端計算的小計
+            unit_price=detail.unit_price, # 使用前端傳來的單價
+            subtotal=detail.subtotal, # 使用前端傳來的小計
             discount_id=discount_id
         )
         db.add(db_detail)
-        total_amount += subtotal
+        # total_amount += subtotal
 
     # Update order total
-    db_order.total_amount = total_amount
+    # db_order.total_amount = total_amount
     
     try:
         db.commit()

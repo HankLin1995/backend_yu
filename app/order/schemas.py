@@ -32,6 +32,7 @@ class OrderDetail(OrderDetailBase):
 
 class OrderBase(BaseModel):
     line_id: str
+    total_amount: Optional[float] = 0
     schedule_id: Optional[int] = None
     payment_method: Optional[str] = None
     delivery_address: Optional[str] = None

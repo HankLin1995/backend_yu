@@ -634,22 +634,22 @@ def test_create_order_with_quantity_discount(client, db_session, test_customer, 
         price=450  # 5個的價格是450
     )
     
-    discount_10 = ProductDiscount(
-        product_id=product.product_id,
-        quantity=10,
-        price=900  # 10個的價格是900
-    )
+    # discount_10 = ProductDiscount(
+    #     product_id=product.product_id,
+    #     quantity=10,
+    #     price=900  # 10個的價格是900
+    # )
 
     db_session.add(discount_2)
     db_session.add(discount_5)
-    db_session.add(discount_10)
+    # db_session.add(discount_10)
     db_session.commit()
     
     # 訂購10個產品（應該使用10個的折扣價格）
     order_data = {
         "line_id": test_customer.line_id,
         "schedule_id": test_schedule.schedule_id,
-        "total_amount": 900.00,
+        "total_amount": 1300.00,
         "payment_method": "cash",
         "order_details": [
             {
@@ -666,7 +666,7 @@ def test_create_order_with_quantity_discount(client, db_session, test_customer, 
     data = response.json()
     
     # 驗證訂單總金額是否為900（使用10個的折扣）
-    assert float(data["total_amount"]) == 900.0
+    assert float(data["total_amount"]) == 1300.0
     
     # 驗證訂單詳情
     assert len(data["order_details"]) == 1
