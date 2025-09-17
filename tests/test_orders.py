@@ -609,6 +609,76 @@ def test_delete_completed_order(client, db_session, test_customer, test_schedule
     assert existing_order.order_status == "completed"
 
 
+def test_delete_order_restore_stock(client, db_session, test_customer, test_schedule):
+    # 創建測試產品
+    product = Product(
+        product_name="Stock Test Product",
+        description="Product for testing stock restoration",
+        price=100.00,
+        one_set_price=90.00,
+        one_set_quantity=5,  # 每組5個
+        stock_quantity=20,
+        unit="piece"
+    )
+    db_session.add(product)
+    db_session.commit()
+    
+    # 記錄原始庫存和產品ID
+    original_stock = product.stock_quantity
+    product_id = product.product_id
+    
+    # 創建訂單
+    order = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=180.00,  # 2組的價格
+        payment_method="cash",
+        order_status="pending"
+    )
+    db_session.add(order)
+    db_session.flush()
+    
+    # 添加訂單詳情 - 訂購2組產品
+    order_detail = OrderDetail(
+        order_id=order.order_id,
+        product_id=product_id,
+        quantity=2,  # 訂購2組
+        unit_price=90.00,  # 每組價格
+        subtotal=180.00  # 總價
+    )
+    db_session.add(order_detail)
+    
+    # 減少庫存 - 模擬訂單創建時的庫存減少
+    actual_quantity = order_detail.quantity * product.one_set_quantity  # 2組 * 每組5個 = 10個
+    product.stock_quantity -= actual_quantity
+    db_session.commit()
+    
+    # 驗證庫存已經減少
+    db_product = db_session.query(Product).filter(Product.product_id == product_id).first()
+    reduced_stock = db_product.stock_quantity
+    assert reduced_stock == original_stock - actual_quantity
+    
+    # 保存訂單ID以便後續查詢
+    order_id = order.order_id
+    
+    # 刪除訂單
+    response = client.delete(f"/orders/{order_id}")
+    assert response.status_code == 200
+    assert response.json()["message"] == "Order soft deleted successfully"
+    
+    # 重新查詢產品以驗證庫存已恢復
+    # 先關閉當前會話並創建新的會話
+    db_session.close()
+    
+    # 重新查詢產品
+    restored_product = db_session.query(Product).filter(Product.product_id == product_id).first()
+    assert restored_product.stock_quantity == original_stock, f"Expected stock to be {original_stock}, but got {restored_product.stock_quantity}"
+    
+    # 驗證訂單已刪除
+    deleted_order = db_session.query(Order).filter(Order.order_id == order_id).first()
+    assert deleted_order is None
+
+
 def test_create_order_with_quantity_discount(client, db_session, test_customer, test_schedule):
     # 創建一個測試產品
     product = Product(

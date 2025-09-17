@@ -424,7 +424,12 @@ def delete_order(order_id: int, current_user: Customer = Depends(get_current_use
     if order.order_status == "pending":
         for detail in order.order_details:
             product = detail.product
-            product.stock += detail.quantity
+            # 計算實際需要的庫存數量
+            actual_quantity = detail.quantity
+            if product.one_set_quantity and product.one_set_quantity > 0:
+                # 如果有設定一組數量，需要將訂購數量轉換為實際庫存數量
+                actual_quantity = detail.quantity * product.one_set_quantity
+            product.stock_quantity += actual_quantity
     
     # Delete the order (cascade will handle order_details)
     db.delete(order)
