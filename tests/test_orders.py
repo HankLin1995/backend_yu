@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime
 from app.order.models import Order, OrderDetail
 from app.customer.models import Customer
-from app.product.models import Product
+from app.product.models import Product, ProductDiscount
 from app.location.models import Schedule, PickupLocation
 
 @pytest.fixture
@@ -607,3 +607,71 @@ def test_delete_completed_order(client, db_session, test_customer, test_schedule
     existing_order = db_session.query(Order).filter(Order.order_id == order.order_id).first()
     assert existing_order is not None
     assert existing_order.order_status == "completed"
+
+
+def test_create_order_with_quantity_discount(client, db_session, test_customer, test_schedule):
+    # 創建一個測試產品
+    product = Product(
+        product_name="Discounted Product",
+        description="Product with quantity discounts",
+        price=120.00,  # 單個價格
+        stock_quantity=50,
+        unit="piece"
+    )
+    db_session.add(product)
+    db_session.flush()
+    
+    # 創建數量折扣：2個的時候是200，5個的時候是450，10個的時候是900
+    discount_2 = ProductDiscount(
+        product_id=product.product_id,
+        quantity=2,
+        price=200  # 2個的價格是200
+    )
+    
+    discount_5 = ProductDiscount(
+        product_id=product.product_id,
+        quantity=5,
+        price=450  # 5個的價格是450
+    )
+    
+    discount_10 = ProductDiscount(
+        product_id=product.product_id,
+        quantity=10,
+        price=900  # 10個的價格是900
+    )
+
+    db_session.add(discount_2)
+    db_session.add(discount_5)
+    db_session.add(discount_10)
+    db_session.commit()
+    
+    # 訂購10個產品（應該使用10個的折扣價格）
+    order_data = {
+        "line_id": test_customer.line_id,
+        "schedule_id": test_schedule.schedule_id,
+        "total_amount": 900.00,
+        "payment_method": "cash",
+        "order_details": [
+            {
+                "product_id": product.product_id,
+                "quantity": 10,  # 訂購10個
+                "unit_price": 120.00,  # 原始單價
+                "subtotal": 900.00  # 原始小計，但後端會重新計算
+            }
+        ]
+    }
+    
+    response = client.post("/orders/", json=order_data)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # 驗證訂單總金額是否為900（使用10個的折扣）
+    assert float(data["total_amount"]) == 900.0
+    
+    # 驗證訂單詳情
+    assert len(data["order_details"]) == 1
+    assert data["order_details"][0]["quantity"] == 10
+    
+    # 驗證庫存是否正確減少
+    updated_product = db_session.query(Product).filter(Product.product_id == product.product_id).first()
+    assert updated_product.stock_quantity == 40  # 原始50 - 訂購的10
