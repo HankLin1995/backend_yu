@@ -574,3 +574,33 @@ def get_orders_by_product_simple(product_id: int, db: Session = Depends(get_db))
         result.append(order_info)
     
     return result
+
+
+@router.put("/{order_id}/amount", response_model=schemas.Order)
+def update_order_amount(order_id: int, amount_update: schemas.OrderAmountUpdate, current_user: Customer = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Update the total amount of an order.
+    
+    This endpoint allows updating the total amount of an existing order.
+    Only the order owner can update their order amount.
+    """
+    # 檢查訂單是否存在
+    order = db.query(models.Order).filter(models.Order.order_id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 檢查訂單狀態，已完成或已取消的訂單不允許更新金額
+    if order.order_status in ["completed", "cancelled"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update amount for {order.order_status} orders"
+        )
+    
+    # 更新訂單金額
+    order.total_amount = amount_update.total_amount
+    order.update_time = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(order)
+    
+    return order

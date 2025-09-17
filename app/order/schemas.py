@@ -72,3 +72,9 @@ class OrderScheduleUpdate(BaseModel):
     schedule_id: int = Field(
         description="The ID of the new schedule for the order"
     )
+
+
+class OrderAmountUpdate(BaseModel):
+    total_amount: float = Field(
+        description="The new total amount for the order"
+    )

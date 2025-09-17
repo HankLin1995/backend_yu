@@ -679,6 +679,113 @@ def test_delete_order_restore_stock(client, db_session, test_customer, test_sche
     assert deleted_order is None
 
 
+def test_update_order_amount(client, db_session, test_customer, test_schedule):
+    # 創建測試訂單
+    order = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash",
+        order_status="pending"
+    )
+    db_session.add(order)
+    db_session.commit()
+    
+    # 更新訂單金額
+    update_data = {"total_amount": 250.00}
+    response = client.put(f"/orders/{order.order_id}/amount", json=update_data)
+    
+    # 驗證回應
+    assert response.status_code == 200
+    data = response.json()
+    assert float(data["total_amount"]) == 250.00
+    
+    # 驗證數據庫更新
+    db_session.expire_all()
+    updated_order = db_session.query(Order).filter(Order.order_id == order.order_id).first()
+    assert float(updated_order.total_amount) == 250.00
+
+
+def test_update_completed_order_amount(client, db_session, test_customer, test_schedule):
+    # 創建已完成的訂單
+    order = Order(
+        line_id=test_customer.line_id,
+        schedule_id=test_schedule.schedule_id,
+        total_amount=200.00,
+        payment_method="cash",
+        order_status="completed"  # 已完成狀態
+    )
+    db_session.add(order)
+    db_session.commit()
+    
+    # 嘗試更新已完成訂單的金額
+    update_data = {"total_amount": 250.00}
+    response = client.put(f"/orders/{order.order_id}/amount", json=update_data)
+    
+    # 驗證回應為錯誤
+    assert response.status_code == 400
+    assert "Cannot update amount for completed orders" in response.json()["detail"]
+    
+    # 驗證數據庫未更新
+    db_session.expire_all()
+    unchanged_order = db_session.query(Order).filter(Order.order_id == order.order_id).first()
+    assert float(unchanged_order.total_amount) == 200.00
+
+
+def test_update_order_amount_preserves_other_fields(client, db_session, test_customer, test_schedule):
+    # 創建訂單並設置多個欄位
+    original_line_id = test_customer.line_id
+    original_schedule_id = test_schedule.schedule_id
+    original_payment_method = "credit_card"
+    original_status = "pending"
+    original_payment_status = "pending"
+    original_amount = 300.00
+    
+    order = Order(
+        line_id=original_line_id,
+        schedule_id=original_schedule_id,
+        payment_method=original_payment_method,
+        order_status=original_status,
+        payment_status=original_payment_status,
+        total_amount=original_amount,
+        delivery_method="store_pickup",
+        delivery_address=None
+    )
+    db_session.add(order)
+    db_session.commit()
+    
+    # 更新訂單金額
+    new_amount = 350.00
+    update_data = {"total_amount": new_amount}
+    response = client.put(f"/orders/{order.order_id}/amount", json=update_data)
+    
+    # 驗證回應
+    assert response.status_code == 200
+    data = response.json()
+    assert float(data["total_amount"]) == new_amount
+    
+    # 驗證其他欄位保持不變
+    assert data["line_id"] == original_line_id
+    assert data["schedule_id"] == original_schedule_id
+    assert data["payment_method"] == original_payment_method
+    assert data["order_status"] == original_status
+    assert data["payment_status"] == original_payment_status
+    assert data["delivery_method"] == "store_pickup"
+    assert data["delivery_address"] is None
+    
+    # 驗證數據庫中的訂單也保持了其他欄位不變
+    db_session.expire_all()
+    updated_order = db_session.query(Order).filter(Order.order_id == order.order_id).first()
+    assert float(updated_order.total_amount) == new_amount
+    assert updated_order.line_id == original_line_id
+    assert updated_order.schedule_id == original_schedule_id
+    assert updated_order.payment_method == original_payment_method
+    assert updated_order.order_status == original_status
+    assert updated_order.payment_status == original_payment_status
+    assert updated_order.delivery_method == "store_pickup"
+    assert updated_order.delivery_address is None
+
+
 def test_create_order_with_quantity_discount(client, db_session, test_customer, test_schedule):
     # 創建一個測試產品
     product = Product(
