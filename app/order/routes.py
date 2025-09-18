@@ -378,10 +378,6 @@ def update_order_schedule(order_id: int, schedule_update: schemas.OrderScheduleU
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Check if user is authorized
-    if order.line_id != current_user.line_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this order")
-    
     # Check if the order status allows schedule changes
     if order.order_status in ["completed", "cancelled"]:
         raise HTTPException(
