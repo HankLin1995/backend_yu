@@ -10,6 +10,7 @@ class CustomerBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
+    ban: Optional[bool] = False
 
 
 class CustomerCreate(CustomerBase):
@@ -18,6 +19,10 @@ class CustomerCreate(CustomerBase):
 
 class CustomerUpdate(CustomerBase):
     pass
+
+
+class CustomerBanUpdate(BaseModel):
+    ban: bool
 
 
 class Customer(CustomerBase):

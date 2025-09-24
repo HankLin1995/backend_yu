@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,7 @@ class Customer(Base):
     email = Column(String(255))
     address = Column(Text)
     create_date = Column(DateTime(timezone=True), server_default=func.now())
+    ban = Column(Boolean, default=False)
 
     # Relationships
     orders = relationship("Order", back_populates="customer")

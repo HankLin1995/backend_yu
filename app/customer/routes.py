@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -34,6 +34,18 @@ def get_customer(line_id: str, db: Session = Depends(get_db)):
 def list_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     customers = db.query(models.Customer).offset(skip).limit(limit).all()
     return customers
+
+
+@router.patch("/{line_id}/ban", response_model=schemas.Customer)
+def update_customer_ban(line_id: str, ban_update: schemas.CustomerBanUpdate, db: Session = Depends(get_db)):
+    db_customer = db.query(models.Customer).filter(models.Customer.line_id == line_id).first()
+    if not db_customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    
+    db_customer.ban = ban_update.ban
+    db.commit()
+    db.refresh(db_customer)
+    return db_customer
 
 
 @router.put("/{line_id}", response_model=schemas.Customer)

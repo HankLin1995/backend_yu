@@ -82,6 +82,74 @@ def test_update_nonexistent_customer(client: TestClient):
     assert response.status_code == 404
 
 
+def test_update_customer_ban(client: TestClient, test_customer):
+    # Create customer first
+    create_response = client.post("/customers/", json=test_customer)
+    assert create_response.status_code == 200
+    original_data = create_response.json()
+    
+    # Update the customer's ban status to True
+    ban_update = {"ban": True}
+    response = client.patch(f"/customers/{test_customer['line_id']}/ban", json=ban_update)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Verify ban status is updated
+    assert data["ban"] == True
+    
+    # Verify other fields remain unchanged
+    for field in ["line_id", "name", "line_name", "line_pic_url", "phone", "email", "address"]:
+        assert data[field] == original_data[field], f"Field {field} was unexpectedly changed"
+    
+    # Verify the ban status by getting the customer
+    get_response = client.get(f"/customers/{test_customer['line_id']}")
+    assert get_response.status_code == 200
+    get_data = get_response.json()
+    assert get_data["ban"] == True
+    
+    # Update the customer's ban status back to False
+    ban_update = {"ban": False}
+    response = client.patch(f"/customers/{test_customer['line_id']}/ban", json=ban_update)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ban"] == False
+    
+    # Verify other fields still remain unchanged
+    for field in ["line_id", "name", "line_name", "line_pic_url", "phone", "email", "address"]:
+        assert data[field] == original_data[field], f"Field {field} was unexpectedly changed"
+
+
+def test_update_nonexistent_customer_ban(client: TestClient):
+    ban_update = {"ban": True}
+    response = client.patch("/customers/nonexistent/ban", json=ban_update)
+    assert response.status_code == 404
+
+
+def test_update_customer_ban_ignores_other_fields(client: TestClient, test_customer):
+    # Create customer first
+    create_response = client.post("/customers/", json=test_customer)
+    assert create_response.status_code == 200
+    original_data = create_response.json()
+    
+    # Try to update ban and other fields at the same time
+    update_data = {
+        "ban": True,
+        "name": "Should Not Change",
+        "phone": "9999999999"
+    }
+    
+    response = client.patch(f"/customers/{test_customer['line_id']}/ban", json=update_data)
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Verify ban was updated
+    assert data["ban"] == True
+    
+    # Verify other fields were not changed
+    assert data["name"] == original_data["name"]
+    assert data["phone"] == original_data["phone"]
+
+
 # def test_delete_customer(client: TestClient):
 #     # 創建要刪除的測試用戶
 #     test_delete_user = {
