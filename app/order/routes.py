@@ -479,6 +479,7 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
             # Add this order detail to our list
             all_order_data.append({
                 '訂單編號': order.order_id,
+                '訂單金額': order.total_amount,
                 '訂購人': customer.name if customer else '',
                 '電話': customer.phone if customer and customer.phone else '',
                 '日期': schedule.date if schedule else '',
