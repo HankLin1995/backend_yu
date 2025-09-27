@@ -384,28 +384,6 @@ def get_customer_orders(line_id: str, current_user: Customer = Depends(get_curre
         .filter(models.Order.line_id == line_id)\
         .all()
     
-    # 為每個訂單的每個詳細項目增加當前價格計算
-    for order in orders:
-        for detail in order.order_details:
-            product = detail.product
-            # 設置產品基本資訊
-            detail.product_name = product.product_name
-            detail.product_description = product.description
-            
-            # 獲取產品照片
-            photo = db.query(ProductPhoto)\
-                .filter(ProductPhoto.product_id == product.product_id)\
-                .first()
-            detail.product_photo_path = photo.file_path if photo else None
-            
-            # 使用當前價格和折扣重新計算價格
-            item_subtotal = calculate_item_subtotal(product, detail.quantity, db)
-            
-            # 添加計算後的價格信息
-            detail.current_price = item_subtotal["price"]
-            detail.original_price = item_subtotal["originalPrice"]
-            detail.saved_amount = item_subtotal["savedAmount"]
-    
     return orders
 
 
