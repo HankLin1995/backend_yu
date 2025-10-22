@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Integer
+from sqlalchemy import Column, Date, Integer, text
 from sqlalchemy.sql import func
 
 from app.db import Base
@@ -7,5 +7,5 @@ from app.db import Base
 class LineBotUsage(Base):
     __tablename__ = "linebot_usage"
 
-    date = Column(Date, primary_key=True, server_default=func.current_date())
+    date = Column(Date, primary_key=True)
     push_count = Column(Integer, default=0, nullable=False)

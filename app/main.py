@@ -4,11 +4,9 @@ from app.product.routes import router as product_router
 from app.photo.routes import router as photo_router
 from app.customer.routes import router as customer_router
 from app.location.routes import router as location_router
-<<<<<<< HEAD
 from app.marquee.routes import router as marquee_router
-=======
 from app.linebot_usage.routes import router as linebot_usage_router
->>>>>>> ed90f30a85ade090f4b663173f8980170d8b37e6
+
 from app.db import create_tables
 from app.order.routes import router as order_router
 from fastapi.staticfiles import StaticFiles
