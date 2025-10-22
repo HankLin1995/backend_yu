@@ -26,6 +26,13 @@ class OrderDetail(OrderDetailBase):
     order_id: int
     # 完整的產品對象
     product: Optional[Product] = None
+    # 當前價格計算結果
+    current_price: Optional[float] = None
+    original_price: Optional[float] = None
+    saved_amount: Optional[float] = None
+    product_name: Optional[str] = None
+    product_description: Optional[str] = None
+    product_photo_path: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

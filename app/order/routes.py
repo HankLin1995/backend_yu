@@ -11,8 +11,60 @@ from app.photo.models import ProductPhoto
 from app.order import models, schemas
 from app.auth.dependencies import get_current_user
 from app.location.models import PickupLocation, Schedule
+from typing import Dict, Any
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+def calculate_item_subtotal(product: Product, quantity: int, db: Session) -> Dict[str, Any]:
+    """
+    Calculate item subtotal based on the same logic as calculateItemPrice in CartPage.jsx
+    
+    Args:
+        product: The product object
+        quantity: The quantity ordered
+        db: Database session
+        
+    Returns:
+        Dictionary with price, originalPrice, and savedAmount
+    """
+    # 使用原始單價（如果有），否則使用商品的單價
+    # 注意：後端沒有 originalUnitPrice 的概念，所以只檢查 one_set_price 和 price
+    base_price = float(product.one_set_price if product.one_set_quantity else product.price)
+    original_total = base_price * quantity
+    
+    # 檢查是否有適用的折扣
+    discounts = db.query(ProductDiscount)\
+        .filter(ProductDiscount.product_id == product.product_id)\
+        .all()
+    
+    if discounts:
+        # 按數量降序排序，找到符合當前數量的最大折扣
+        sorted_discounts = sorted(discounts, key=lambda d: d.quantity, reverse=True)
+        
+        # 尋找第一個適用的折扣（數量大於等於折扣要求數量）
+        applicable_discount = next((d for d in sorted_discounts if quantity >= d.quantity), None)
+        
+        if applicable_discount:
+            # 如果找到符合的折扣，使用折扣價格
+            discount_sets = quantity // applicable_discount.quantity
+            remaining_quantity = quantity % applicable_discount.quantity
+            
+            # 計算折扣價格和剩餘數量的原價
+            final_price = (discount_sets * float(applicable_discount.price)) + (remaining_quantity * base_price)
+            
+            return {
+                "price": final_price,
+                "originalPrice": original_total,
+                "savedAmount": original_total - final_price
+            }
+    
+    # 如果沒有折扣，使用原價
+    return {
+        "price": original_total,
+        "originalPrice": original_total,
+        "savedAmount": 0
+    }
 
 
 @router.post("/{order_id}/details", response_model=schemas.Order)
@@ -305,6 +357,14 @@ def get_order(order_id: int, current_user: Customer = Depends(get_current_user),
             .filter(ProductPhoto.product_id == product.product_id)\
             .first()
         detail.product_photo_path = photo.file_path if photo else None
+        
+        # 使用當前價格和折扣重新計算價格
+        item_subtotal = calculate_item_subtotal(product, detail.quantity, db)
+        
+        # 添加計算後的價格信息
+        detail.current_price = item_subtotal["price"]
+        detail.original_price = item_subtotal["originalPrice"]
+        detail.saved_amount = item_subtotal["savedAmount"]
     
     return order
 
@@ -323,9 +383,6 @@ def get_customer_orders(line_id: str, current_user: Customer = Depends(get_curre
     orders = db.query(models.Order)\
         .filter(models.Order.line_id == line_id)\
         .all()
-    
-    # 產品資訊已通過 SQLAlchemy 關聯自動載入
-    # 不需要額外處理
     
     return orders
 
@@ -475,11 +532,14 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 remark = "未到貨"
             else:
                 remark = ""
-
+            
+            # Calculate item subtotal based on CartPage.jsx calculateItemPrice logic
+            item_subtotal = calculate_item_subtotal(product, order_detail.quantity, db)
+            
             # Add this order detail to our list
             all_order_data.append({
                 '訂單編號': order.order_id,
-                '訂單金額': order.total_amount,
+                # '訂單金額': order.total_amount,
                 '訂購人': customer.name if customer else '',
                 '電話': customer.phone if customer and customer.phone else '',
                 '日期': schedule.date if schedule else '',
@@ -487,12 +547,16 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 '商品名稱': product.product_name if product else '',
                 '數量': order_detail.quantity,
                 '單位': unit_display,
+                "小計金額": float(item_subtotal["price"]),
                 '備註': remark,
                 '明細編號': order_detail.order_detail_id,
                 '領取狀態': "已領取" if order_detail.is_finish else "未領取",
                 '訂單狀態': STATUS_MAPPING.get(order.order_status, ''),
                 "配送方式": order.delivery_method,
                 "配送地址": order.delivery_address,
+                # "小計金額": float(item_subtotal["price"]),
+                # "原始金額": float(item_subtotal["originalPrice"]),
+                # "節省金額": float(item_subtotal["savedAmount"])
             })
     
     return all_order_data
