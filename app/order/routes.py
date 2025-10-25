@@ -348,6 +348,18 @@ def get_order(order_id: int, current_user: Customer = Depends(get_current_user),
     # 增強訂單詳細資訊
     for detail in order.order_details:
         product = detail.product
+        
+        # 檢查商品是否存在
+        if product is None:
+            # 如果商品已被刪除，設置預設值
+            detail.product_name = "商品已下架"
+            detail.product_description = "此商品已不存在"
+            detail.product_photo_path = None
+            detail.current_price = float(detail.subtotal)
+            detail.original_price = float(detail.subtotal)
+            detail.saved_amount = 0
+            continue
+        
         # 設置產品基本資訊
         detail.product_name = product.product_name
         detail.product_description = product.description
