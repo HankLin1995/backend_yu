@@ -21,9 +21,15 @@ class OrderDetailUpdate(OrderDetailBase):
     pass
 
 
-class OrderDetail(OrderDetailBase):
+class OrderDetail(BaseModel):
     order_detail_id: int
     order_id: int
+    product_id: Optional[int] = None  # 允許為 None，以處理商品已刪除的情況
+    quantity: int
+    unit_price: float
+    subtotal: float
+    discount_id: Optional[int] = None
+    is_finish: bool = False
     # 完整的產品對象
     product: Optional[Product] = None
     # 當前價格計算結果
