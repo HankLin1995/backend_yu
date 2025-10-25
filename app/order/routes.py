@@ -138,13 +138,16 @@ def delete_order_detail(order_id: int, detail_id: int, db: Session = Depends(get
     db_detail = db.query(models.OrderDetail).filter(models.OrderDetail.order_detail_id == detail_id, models.OrderDetail.order_id == order_id).first()
     if not db_detail:
         raise HTTPException(status_code=404, detail="Order detail not found")
+    
+    # 檢查商品是否存在，如果商品已被刪除則跳過庫存恢復
     product = db.query(Product).filter(Product.product_id == db_detail.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    actual_quantity = db_detail.quantity
-    if hasattr(product, 'one_set_quantity') and product.one_set_quantity and product.one_set_quantity > 0:
-        actual_quantity = db_detail.quantity * product.one_set_quantity
-    product.stock_quantity += actual_quantity
+    if product:
+        # 只有商品存在時才恢復庫存
+        actual_quantity = db_detail.quantity
+        if hasattr(product, 'one_set_quantity') and product.one_set_quantity and product.one_set_quantity > 0:
+            actual_quantity = db_detail.quantity * product.one_set_quantity
+        product.stock_quantity += actual_quantity
+    
     db.delete(db_detail)
     # Recalculate total
     db_order.total_amount = sum(d.subtotal for d in db.query(models.OrderDetail).filter(models.OrderDetail.order_id == order_id))
@@ -355,8 +358,9 @@ def get_order(order_id: int, current_user: Customer = Depends(get_current_user),
             detail.product_name = "商品已下架"
             detail.product_description = "此商品已不存在"
             detail.product_photo_path = None
-            detail.current_price = float(detail.subtotal)
-            detail.original_price = float(detail.subtotal)
+            # 顯示價格為 0，避免累計到總額
+            detail.current_price = 0.0
+            detail.original_price = 0.0
             detail.saved_amount = 0
             continue
         
@@ -537,9 +541,10 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 # 商品已被刪除，使用預設值
                 unit_display = ""
                 remark = "商品已下架"
+                # 顯示價格為 0，避免累計到總額
                 item_subtotal = {
-                    "price": float(order_detail.subtotal),
-                    "originalPrice": float(order_detail.subtotal),
+                    "price": 0.0,
+                    "originalPrice": 0.0,
                     "savedAmount": 0
                 }
             else:
