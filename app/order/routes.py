@@ -532,21 +532,32 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
         for order_detail in order.order_details:
             product = db.query(Product).filter(Product.product_id == order_detail.product_id).first()
             
-            # Format unit display
-            if product and product.one_set_quantity > 1:
-                unit_display = f"組(每組{product.one_set_quantity}{product.unit})"
-                remark = ""
+            # 檢查商品是否存在
+            if product is None:
+                # 商品已被刪除，使用預設值
+                unit_display = ""
+                remark = "商品已下架"
+                item_subtotal = {
+                    "price": float(order_detail.subtotal),
+                    "originalPrice": float(order_detail.subtotal),
+                    "savedAmount": 0
+                }
             else:
-                unit_display = product.unit if product else ""
-                remark = ""
-            
-            if product.arrival_date and product.arrival_date > date.today():
-                remark = "未到貨"
-            else:
-                remark = ""
-            
-            # Calculate item subtotal based on CartPage.jsx calculateItemPrice logic
-            item_subtotal = calculate_item_subtotal(product, order_detail.quantity, db)
+                # Format unit display
+                if product.one_set_quantity > 1:
+                    unit_display = f"組(每組{product.one_set_quantity}{product.unit})"
+                    remark = ""
+                else:
+                    unit_display = product.unit
+                    remark = ""
+                
+                if product.arrival_date and product.arrival_date > date.today():
+                    remark = "未到貨"
+                else:
+                    remark = ""
+                
+                # Calculate item subtotal based on CartPage.jsx calculateItemPrice logic
+                item_subtotal = calculate_item_subtotal(product, order_detail.quantity, db)
             
             # Add this order detail to our list
             all_order_data.append({
@@ -556,7 +567,7 @@ def get_orders_list(current_user: Customer = Depends(get_current_user), db: Sess
                 '電話': customer.phone if customer and customer.phone else '',
                 '日期': schedule.date if schedule else '',
                 '地點': location.name if location else '',
-                '商品名稱': product.product_name if product else '',
+                '商品名稱': product.product_name if product else '商品已下架',
                 '數量': order_detail.quantity,
                 '單位': unit_display,
                 "小計金額": float(item_subtotal["price"]),
