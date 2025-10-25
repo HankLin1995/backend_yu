@@ -475,9 +475,9 @@ def delete_order(order_id: int, current_user: Customer = Depends(get_current_use
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # 如果存在，再檢查授權
-    if current_user.line_id != order.line_id:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this order")
+    # # 如果存在，再檢查授權
+    # if current_user.line_id != order.line_id:
+    #     raise HTTPException(status_code=403, detail="Not authorized to delete this order")
     
     if order.order_status == "completed":
         raise HTTPException(
